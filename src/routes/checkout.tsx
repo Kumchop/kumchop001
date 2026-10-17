@@ -30,8 +30,9 @@ function Checkout() {
     const e = validateOrder(o); setErrors(e); if (Object.keys(e).length) return;
     const url = whatsappUrl(lines, o); if (!url) return;
     setSentAt(Date.now()); setWaUrl(url);
-    const w = window.open(url, '_blank');
-    if (!w) { try { (window.top ?? window).location.href = url; } catch { window.location.href = url; } }
+    const a = document.createElement('a');
+    a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    document.body.appendChild(a); a.click(); a.remove();
   };
   const err = (k: string) => errors[k] && <span className="field-error" role="alert">{errors[k]}</span>;
   return <><div className="site-container page-top"><span className="eyebrow">ONE LAST STEP</span><h1>Checkout.</h1></div>
