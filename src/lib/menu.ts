@@ -89,7 +89,7 @@ export function readCart(raw: string | null): CartLine[] {
 }
 
 /* ---------- WhatsApp order ---------- */
-export type OrderDetails = {name: string; phone: string; email?: string; orderType: 'pickup' | 'delivery'; address?: string; time?: string; notes?: string};
+export type OrderDetails = {name: string; phone: string; email?: string | undefined; orderType: 'pickup' | 'delivery'; address?: string | undefined; time?: string | undefined; notes?: string | undefined};
 export const whatsappDigits = (n: string) => {
   let d = n.replace(/\D/g, '');
   if (d.startsWith('0')) d = '234' + d.slice(1);

@@ -8,10 +8,10 @@ export const Route = createFileRoute('/checkout')({head: () => pageHead('Checkou
 
 export function validateOrder(o: OrderDetails) {
   const e: Record<string, string> = {};
-  if (o.name.trim().length < 2) e.name = 'Please enter your full name.';
-  if (!/^\+?[0-9 ()-]{7,20}$/.test(o.phone.trim()) || o.phone.replace(/\D/g, '').length < 10) e.phone = 'Enter a valid phone number, e.g. 0803 000 0000.';
-  if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email)) e.email = 'Enter a valid email or leave it blank.';
-  if (o.orderType === 'delivery' && (o.address ?? '').trim().length < 8) e.address = 'Enter your delivery address with a landmark.';
+  if (o.name.trim().length < 2) e['name'] = 'Please enter your full name.';
+  if (!/^\+?[0-9 ()-]{7,20}$/.test(o.phone.trim()) || o.phone.replace(/\D/g, '').length < 10) e['phone'] = 'Enter a valid phone number, e.g. 0803 000 0000.';
+  if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email)) e['email'] = 'Enter a valid email or leave it blank.';
+  if (o.orderType === 'delivery' && (o.address ?? '').trim().length < 8) e['address'] = 'Enter your delivery address with a landmark.';
   return e;
 }
 
@@ -35,13 +35,13 @@ function Checkout() {
     <section className="site-container page-body">{lines.length === 0 ? <div className="empty-state"><h2>Your cart is empty.</h2><Button asChild className="mt-6"><Link to="/order">Order Online</Link></Button></div> :
       <div className="cart-layout"><div>
         <form className="form-grid" noValidate onSubmit={submit}>
-          <label>Full name *<input name="name" autoComplete="name" placeholder="Full name" aria-invalid={!!errors.name} />{err('name')}</label>
-          <label>Phone number *<input type="tel" name="phone" autoComplete="tel" placeholder="0803 000 0000" aria-invalid={!!errors.phone} />{err('phone')}</label>
+          <label>Full name *<input name="name" autoComplete="name" placeholder="Full name" aria-invalid={!!errors['name']} />{err('name')}</label>
+          <label>Phone number *<input type="tel" name="phone" autoComplete="tel" placeholder="0803 000 0000" aria-invalid={!!errors['phone']} />{err('phone')}</label>
           <label className="form-wide">Email (optional)<input type="email" name="email" autoComplete="email" placeholder="you@example.com" />{err('email')}</label>
           <fieldset className="form-wide order-type"><legend>Order type *</legend>
             {(['pickup', 'delivery'] as const).map(t => <label key={t} className={type === t ? 'active' : ''}><input type="radio" name="orderType" value={t} checked={type === t} onChange={() => setType(t)} />{t === 'pickup' ? 'Pickup' : 'Delivery'}</label>)}
           </fieldset>
-          {type === 'delivery' && <label className="form-wide">Delivery address *<textarea name="address" autoComplete="street-address" placeholder="Address and nearby landmark" aria-invalid={!!errors.address} />{err('address')}</label>}
+          {type === 'delivery' && <label className="form-wide">Delivery address *<textarea name="address" autoComplete="street-address" placeholder="Address and nearby landmark" aria-invalid={!!errors['address']} />{err('address')}</label>}
           <label className="form-wide">Preferred {type} time (optional)<input name="time" placeholder="e.g. Today, 7:30 PM" /></label>
           <label className="form-wide">Order notes (optional)<textarea name="notes" placeholder="Allergies, extra pepper, etc." /></label>
           <div className="form-wide">

@@ -6,8 +6,8 @@ import {categories, menuItems, money, cartSubtotal, type MenuItem} from '@/lib/m
 import {useCart} from './cart';
 
 export type SortKey = 'name' | 'price-asc' | 'price-desc';
-export type CatalogSearch = {category: string; sort: SortKey};
-export const validateCatalogSearch = (s: Record<string, unknown>): CatalogSearch => ({
+export type CatalogSearch = {category?: string; sort?: SortKey};
+export const validateCatalogSearch = (s: Record<string, unknown>): {category?: string; sort?: SortKey} => ({
   category: typeof s['category'] === 'string' && categories.some(c => c.id === s['category']) ? (s['category'] as string) : 'all',
   sort: s['sort'] === 'price-asc' || s['sort'] === 'price-desc' ? s['sort'] : 'name',
 });
@@ -22,7 +22,7 @@ export function MenuCatalog({search, onSearch}: {search: CatalogSearch; onSearch
   const [query, setQuery] = useState('');
   const [availableOnly, setAvailableOnly] = useState(false);
   const {lines, change, count, setDrawerOpen} = useCart();
-  const items = filterMenu(menuItems, search.category, query, search.sort, availableOnly);
+  const items = filterMenu(menuItems, search.category ?? 'all', query, search.sort ?? 'name', availableOnly);
   const catName = (id: string) => categories.find(c => c.id === id)?.name ?? id;
   return (
     <section className="site-container page-body">
@@ -30,7 +30,7 @@ export function MenuCatalog({search, onSearch}: {search: CatalogSearch; onSearch
         <div className="search-field"><Search /><input type="search" aria-label="Search food by name" placeholder="Search food by name…" value={query} onChange={e => setQuery(e.target.value)} /></div>
         <div className="order-toolbar-row">
           <label className="sort-select">Sort
-            <select aria-label="Sort products" value={search.sort} onChange={e => onSearch({sort: e.target.value as SortKey})}>
+            <select aria-label="Sort products" value={search.sort ?? 'name'} onChange={e => onSearch({sort: e.target.value as SortKey})}>
               <option value="name">Name (A–Z)</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option>
             </select>
           </label>
@@ -39,7 +39,7 @@ export function MenuCatalog({search, onSearch}: {search: CatalogSearch; onSearch
         </div>
       </div>
       <div className="menu-controls order-cats" aria-label="Menu categories">
-        {[{id: 'all', name: 'All'}, ...categories].map(c => <Button size="sm" variant={search.category === c.id ? 'default' : 'outline'} key={c.id} aria-pressed={search.category === c.id} onClick={() => onSearch({category: c.id})}>{c.name}</Button>)}
+        {[{id: 'all', name: 'All'}, ...categories].map(c => <Button size="sm" variant={(search.category ?? 'all') === c.id ? 'default' : 'outline'} key={c.id} aria-pressed={(search.category ?? 'all') === c.id} onClick={() => onSearch({category: c.id})}>{c.name}</Button>)}
       </div>
       <p className="fine-print mb-5" aria-live="polite">{items.length} {items.length === 1 ? 'item' : 'items'}</p>
       <div className="food-grid">
