@@ -29,7 +29,7 @@ describe('Kumchop menu and cart rules', () => {
     const r = filterMenu(menuItems, 'drinks', 'coke', 'name', false);
     expect(r.map(i => i.id)).toEqual(['coke']);
     const p = filterMenu(menuItems, 'rice', '', 'price-asc', false);
-    expect(p[0].priceKobo).toBeLessThanOrEqual(p[p.length - 1].priceKobo);
+    expect(p[0]!.priceKobo).toBeLessThanOrEqual(p[p.length - 1]!.priceKobo);
   });
   it('builds an encoded WhatsApp order to the primary number', () => {
     const o = {name: 'Ada', phone: '08030000000', orderType: 'delivery' as const, address: 'Ibaka road'};

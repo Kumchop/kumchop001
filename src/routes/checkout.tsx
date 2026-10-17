@@ -8,10 +8,10 @@ export const Route = createFileRoute('/checkout')({head: () => pageHead('Checkou
 
 export function validateOrder(o: OrderDetails) {
   const e: Record<string, string> = {};
-  if (o.name.trim().length < 2) e.name = 'Please enter your full name.';
-  if (!/^\+?[0-9 ()-]{7,20}$/.test(o.phone.trim()) || o.phone.replace(/\D/g, '').length < 10) e.phone = 'Enter a valid phone number, e.g. 0803 000 0000.';
-  if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email)) e.email = 'Enter a valid email or leave it blank.';
-  if (o.orderType === 'delivery' && (o.address ?? '').trim().length < 8) e.address = 'Enter your delivery address with a landmark.';
+  if (o.name.trim().length < 2) e['name'] = 'Please enter your full name.';
+  if (!/^\+?[0-9 ()-]{7,20}$/.test(o.phone.trim()) || o.phone.replace(/\D/g, '').length < 10) e['phone'] = 'Enter a valid phone number, e.g. 0803 000 0000.';
+  if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email)) e['email'] = 'Enter a valid email or leave it blank.';
+  if (o.orderType === 'delivery' && (o.address ?? '').trim().length < 8) e['address'] = 'Enter your delivery address with a landmark.';
   return e;
 }
 
@@ -21,38 +21,12 @@ function Checkout() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sentAt, setSentAt] = useState<number | null>(null);
   const fee = deliveryFee(type);
-  const submit = async (ev: FormEvent<HTMLFormElement>) => {
+  const submit = (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
     if (sentAt && Date.now() - sentAt < 5000) return;
     const f = new FormData(ev.currentTarget); const g = (k: string) => String(f.get(k) ?? '').trim();
     const o: OrderDetails = {name: g('name'), phone: g('phone'), email: g('email') || undefined, orderType: type, address: g('address') || undefined, time: g('time') || undefined, notes: g('notes') || undefined};
     const e = validateOrder(o); setErrors(e); if (Object.keys(e).length) return;
-
-    const orderPayload = {
-      ...o,
-      lines: lines.map((line) => {
-        const item = findItem(line.id);
-        return item ? {id: item.id, quantity: line.quantity, name: item.name, priceKobo: item.priceKobo} : null;
-      }).filter((line): line is {id: string; quantity: number; name: string; priceKobo: number} => line !== null),
-    };
-
-    try {
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null) as {message?: string} | null;
-        setErrors({form: payload?.message ?? 'Your order could not be submitted. Please try again.'});
-        return;
-      }
-    } catch {
-      setErrors({form: 'Your order could not be submitted right now. Please try again.'});
-      return;
-    }
-
     const url = whatsappUrl(lines, o); if (!url) return;
     setSentAt(Date.now()); window.open(url, '_blank', 'noopener');
   };
@@ -61,18 +35,17 @@ function Checkout() {
     <section className="site-container page-body">{lines.length === 0 ? <div className="empty-state"><h2>Your cart is empty.</h2><Button asChild className="mt-6"><Link to="/order">Order Online</Link></Button></div> :
       <div className="cart-layout"><div>
         <form className="form-grid" noValidate onSubmit={submit}>
-          <label>Full name *<input name="name" autoComplete="name" placeholder="Full name" aria-invalid={!!errors.name} />{err('name')}</label>
-          <label>Phone number *<input type="tel" name="phone" autoComplete="tel" placeholder="0803 000 0000" aria-invalid={!!errors.phone} />{err('phone')}</label>
+          <label>Full name *<input name="name" autoComplete="name" placeholder="Full name" aria-invalid={!!errors['name']} />{err('name')}</label>
+          <label>Phone number *<input type="tel" name="phone" autoComplete="tel" placeholder="0803 000 0000" aria-invalid={!!errors['phone']} />{err('phone')}</label>
           <label className="form-wide">Email (optional)<input type="email" name="email" autoComplete="email" placeholder="you@example.com" />{err('email')}</label>
           <fieldset className="form-wide order-type"><legend>Order type *</legend>
             {(['pickup', 'delivery'] as const).map(t => <label key={t} className={type === t ? 'active' : ''}><input type="radio" name="orderType" value={t} checked={type === t} onChange={() => setType(t)} />{t === 'pickup' ? 'Pickup' : 'Delivery'}</label>)}
           </fieldset>
-          {type === 'delivery' && <label className="form-wide">Delivery address *<textarea name="address" autoComplete="street-address" placeholder="Address and nearby landmark" aria-invalid={!!errors.address} />{err('address')}</label>}
+          {type === 'delivery' && <label className="form-wide">Delivery address *<textarea name="address" autoComplete="street-address" placeholder="Address and nearby landmark" aria-invalid={!!errors['address']} />{err('address')}</label>}
           <label className="form-wide">Preferred {type} time (optional)<input name="time" placeholder="e.g. Today, 7:30 PM" /></label>
           <label className="form-wide">Order notes (optional)<textarea name="notes" placeholder="Allergies, extra pepper, etc." /></label>
           <div className="form-wide">
             <Button type="submit" size="lg" disabled={!canSubmitOrder(lines)} className="w-full"><MessageCircle />Send order on WhatsApp</Button>
-            {errors.form && <p role="alert" className="field-error mt-2">{errors.form}</p>}
             <p className="fine-print">Your order is sent to Kumchop ({restaurant.primaryOrderingNumber}) on WhatsApp. It is only confirmed once Kumchop replies.</p>
             {sentAt && <p role="status" className="form-feedback">WhatsApp opened with your order. Tap send in WhatsApp, then wait for Kumchop to confirm. Not opened? Allow pop-ups and try again.</p>}
             <div className="notice mt-5"><CreditCard size={16} className="inline mr-2" /><strong>Card payment is not available yet.</strong> Pay as agreed with Kumchop when they confirm your order.</div>
