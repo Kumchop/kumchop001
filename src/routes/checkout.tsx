@@ -20,6 +20,7 @@ function Checkout() {
   const [type, setType] = useState<'pickup' | 'delivery'>('pickup');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sentAt, setSentAt] = useState<number | null>(null);
+  const [waUrl, setWaUrl] = useState<string | null>(null);
   const fee = deliveryFee(type);
   const submit = (ev: FormEvent<HTMLFormElement>) => {
     ev.preventDefault();
@@ -28,7 +29,9 @@ function Checkout() {
     const o: OrderDetails = {name: g('name'), phone: g('phone'), email: g('email') || undefined, orderType: type, address: g('address') || undefined, time: g('time') || undefined, notes: g('notes') || undefined};
     const e = validateOrder(o); setErrors(e); if (Object.keys(e).length) return;
     const url = whatsappUrl(lines, o); if (!url) return;
-    setSentAt(Date.now()); window.open(url, '_blank', 'noopener');
+    setSentAt(Date.now()); setWaUrl(url);
+    const w = window.open(url, '_blank');
+    if (!w) { try { (window.top ?? window).location.href = url; } catch { window.location.href = url; } }
   };
   const err = (k: string) => errors[k] && <span className="field-error" role="alert">{errors[k]}</span>;
   return <><div className="site-container page-top"><span className="eyebrow">ONE LAST STEP</span><h1>Checkout.</h1></div>
@@ -47,7 +50,7 @@ function Checkout() {
           <div className="form-wide">
             <Button type="submit" size="lg" disabled={!canSubmitOrder(lines)} className="w-full"><MessageCircle />Send order on WhatsApp</Button>
             <p className="fine-print">Your order is sent to Kumchop ({restaurant.primaryOrderingNumber}) on WhatsApp. It is only confirmed once Kumchop replies.</p>
-            {sentAt && <p role="status" className="form-feedback">WhatsApp opened with your order. Tap send in WhatsApp, then wait for Kumchop to confirm. Not opened? Allow pop-ups and try again.</p>}
+            {sentAt && <p role="status" className="form-feedback">WhatsApp should open with your order. Tap send in WhatsApp, then wait for Kumchop to confirm.{waUrl && <> Not opened? <a href={waUrl} target="_blank" rel="noopener noreferrer" className="underline font-semibold">Tap here to open WhatsApp</a>.</>}</p>}
             <div className="notice mt-5"><CreditCard size={16} className="inline mr-2" /><strong>Card payment is not available yet.</strong> Pay as agreed with Kumchop when they confirm your order.</div>
           </div>
         </form>
