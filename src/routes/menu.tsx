@@ -1,7 +1,7 @@
 import {createFileRoute} from '@tanstack/react-router';
 import {MenuCatalog, validateCatalogSearch} from '@/components/restaurant/catalog';
 import {pageHead} from '@/lib/menu';
-import heroUrl from '@/assets/kumchop-interior.jpg?url';
+import interior from '@/assets/kumchop-restaurant.png.asset.json';
 
 export const Route = createFileRoute('/menu')({
   validateSearch: validateCatalogSearch,
@@ -18,7 +18,7 @@ function MenuPage() {
       <section
         className="menu-hero"
         style={{
-          backgroundImage: `url(${heroUrl ?? '/kumchop-interior.jpg'})`,
+          backgroundImage: `url(${interior.url ?? '/kumchop-restaurant.png'})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           minHeight: '48vh',
