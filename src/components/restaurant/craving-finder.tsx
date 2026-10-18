@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { useServerFn } from '@tanstack/react-start';
-import { Sparkles, Plus } from 'lucide-react';
+import { Sparkles, Plus, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { findItem, money } from '@/lib/menu';
 import { useCart } from './cart';
-import { recommendDishes, type RecommendResult } from '@/lib/recommend.functions';
+import { recommendDishes, AVOID_OPTIONS, type AvoidOption, type RecommendResult } from '@/lib/recommend.functions';
 
 const examples = ['Something spicy with rice', 'Light and no meat', 'A cold sweet treat', 'Big meal under ₦5,000'];
 
@@ -12,13 +12,16 @@ export function CravingFinder() {
   const ask = useServerFn(recommendDishes);
   const cart = useCart();
   const [text, setText] = useState('');
+  const [avoid, setAvoid] = useState<AvoidOption[]>([]);
+  const toggle = (a: AvoidOption) => setAvoid(v => v.includes(a) ? v.filter(x => x !== a) : [...v, a]);
+  const canAsk = text.trim().length >= 2 || avoid.length > 0;
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RecommendResult | null>(null);
   const submit = async (e?: FormEvent) => {
     e?.preventDefault();
-    if (loading || text.trim().length < 2) return;
+    if (loading || !canAsk) return;
     setLoading(true); setResult(null);
-    try { setResult(await ask({ data: { craving: text } })); }
+    try { setResult(await ask({ data: { craving: text, avoid } })); }
     catch (err) { setResult({ picks: [], note: '', error: err instanceof Error ? err.message : 'Something went wrong.' }); }
     finally { setLoading(false); }
   };
@@ -30,9 +33,14 @@ export function CravingFinder() {
       <form onSubmit={submit} className="craving-form">
         <textarea value={text} onChange={e => setText(e.target.value)} maxLength={500} rows={2}
           placeholder="e.g. I want something filling and spicy, no pork" aria-label="Describe your craving" />
-        <Button type="submit" size="lg" disabled={loading || text.trim().length < 2}>{loading ? 'Finding dishes…' : 'Suggest dishes'}</Button>
+        <Button type="submit" size="lg" disabled={loading || !canAsk}>{loading ? 'Finding dishes…' : 'Suggest dishes'}</Button>
       </form>
       <div className="craving-examples">{examples.map(x => <button key={x} type="button" onClick={() => setText(x)}>{x}</button>)}</div>
+      <fieldset className="craving-avoid">
+        <legend>Allergies or ingredients to avoid</legend>
+        <div className="craving-examples">{AVOID_OPTIONS.map(a => <button key={a} type="button" aria-pressed={avoid.includes(a)} className={avoid.includes(a) ? 'active' : ''} onClick={() => toggle(a)}>{a}</button>)}</div>
+      </fieldset>
+      {avoid.length > 0 && <div className="craving-warning" role="note"><TriangleAlert size={18} /><p><strong>Please check before you order.</strong> We don't have full ingredient lists for our dishes, so these filters only help narrow suggestions. They can't guarantee a dish is free of {avoid.join(', ').toLowerCase()}. If you have an allergy, call Kumchop to confirm ingredients and how the food is prepared before ordering.</p></div>}
       {result?.error && <p role="alert" className="form-feedback">{result.error}</p>}
       {result && !result.error && (
         <div role="status">
@@ -44,7 +52,7 @@ export function CravingFinder() {
                 <div><h3>{it.name}</h3><p>{p.reason}</p><strong>{money(it.priceKobo)}</strong></div>
                 <Button size="sm" variant="outline" onClick={() => cart.add(it.id)}><Plus />Add</Button>
               </article>); })}</div>}
-          <p className="fine-print">Suggestions are made by AI. Please confirm ingredients and allergies with Kumchop.</p>
+          <p className="craving-warning craving-warning-small" role="note"><TriangleAlert size={16} />Suggestions are made by AI from dish names only. Always confirm ingredients and allergens with Kumchop before ordering.</p>
         </div>
       )}
     </section>
