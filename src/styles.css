@@ -35,3 +35,9 @@
 .craving-card h3{font-size:1.1rem;}
 .craving-card p{color:var(--muted-foreground);font-size:.9rem;margin:.25rem 0 .5rem;}
 .craving-card strong{color:var(--primary);}
+.craving-avoid{margin-top:1.25rem;border:0;padding:0;}
+.craving-avoid legend{font-size:.85rem;font-weight:600;margin-bottom:.25rem;}
+.craving-examples button.active{color:var(--primary-foreground);background:var(--primary);border-color:var(--primary);}
+.craving-warning{display:flex;gap:.6rem;align-items:flex-start;margin-top:1rem;padding:.85rem 1rem;border-radius:var(--radius);border:1px solid var(--primary);background:color-mix(in oklab,var(--primary) 12%,transparent);font-size:.9rem;}
+.craving-warning svg{flex-shrink:0;color:var(--primary);margin-top:.15rem;}
+.craving-warning-small{font-size:.8rem;padding:.6rem .8rem;}

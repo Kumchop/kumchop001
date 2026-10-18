@@ -1,6 +1,9 @@
 import { createServerFn } from '@tanstack/react-start';
 import { menuItems, money } from './menu';
 
+export const AVOID_OPTIONS = ['Peanuts & nuts', 'Dairy & milk', 'Eggs', 'Gluten & wheat', 'Fish & seafood', 'Pork', 'Beef', 'All meat (vegetarian)', 'Very spicy food'] as const;
+export type AvoidOption = (typeof AVOID_OPTIONS)[number];
+
 export type Recommendation = { id: string; reason: string };
 export type RecommendResult = { picks: Recommendation[]; note: string; error?: string };
 
@@ -23,10 +26,11 @@ const schema = {
 };
 
 export const recommendDishes = createServerFn({ method: 'POST' })
-  .inputValidator((d: { craving: string }) => {
+  .inputValidator((d: { craving: string; avoid?: string[] }) => {
     const craving = String(d?.craving ?? '').trim().slice(0, 500);
-    if (craving.length < 2) throw new Error('Tell us a little about what you feel like eating.');
-    return { craving };
+    const avoid = (Array.isArray(d?.avoid) ? d.avoid : []).filter((a): a is AvoidOption => (AVOID_OPTIONS as readonly string[]).includes(a));
+    if (craving.length < 2 && avoid.length === 0) throw new Error('Tell us a little about what you feel like eating.');
+    return { craving: craving || 'Anything good', avoid };
   })
   .handler(async ({ data }): Promise<RecommendResult> => {
     const key = process.env['LOVABLE_API_KEY'];
@@ -42,8 +46,8 @@ export const recommendDishes = createServerFn({ method: 'POST' })
         store: false,
         reasoning: { effort: 'low' },
         instructions:
-          'You are a friendly food guide for Kumchop, a restaurant in Akungba Akoko, Nigeria. Recommend 1 to 4 dishes ONLY from the menu list given (use the exact id). Never invent dishes, ingredients, or allergy guarantees; only names, categories and prices are known, so for dietary needs say the customer should confirm ingredients with Kumchop. Keep each reason under 25 words. "note" is one short friendly sentence.',
-        input: `Menu (id | name | categories | price):\n${menuText}\n\nCustomer request: ${data.craving}`,
+          'You are a friendly food guide for Kumchop, a restaurant in Akungba Akoko, Nigeria. Recommend 1 to 4 dishes ONLY from the menu list given (use the exact id). Never invent dishes, ingredients, or allergy guarantees; only names, categories and prices are known. If the customer lists things to avoid, leave out any dish whose name or category suggests it may contain them (e.g. milk shake = dairy, pie/bread/spag/pasta = gluten, fish/croaker = seafood, asun/suya/chicken/beef = meat); when unsure, leave it out. Never claim a dish is free of anything; reasons may only say a dish may suit the need and must be confirmed with Kumchop. Keep each reason under 25 words. "note" is one short friendly sentence.',
+        input: `Menu (id | name | categories | price):\n${menuText}\n\nCustomer request: ${data.craving}${data.avoid.length ? `\nMust avoid: ${data.avoid.join(', ')}` : ''}`,
         text: { format: { type: 'json_schema', name: 'recommendations', strict: true, schema } },
       }),
     });
