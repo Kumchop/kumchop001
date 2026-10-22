@@ -83,7 +83,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Meals, snacks and good moments at Kumchop, Akungba Akoko." },
       { name: "author", content: "Kumchop" },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: "/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png" },
     ],
     links: [
       {
@@ -91,6 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

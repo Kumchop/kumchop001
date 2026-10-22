@@ -254,6 +254,20 @@ function Checkout() {
 
         <section className="site-container page-body max-w-2xl mx-auto">
           <div className="receipt-box">
+            <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/40">
+              <img
+                src="/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png"
+                alt="Kumchop"
+                className="h-10 w-auto object-contain"
+              />
+              <div className="text-right">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Official Receipt
+                </span>
+                <p className="text-[11px] text-muted-foreground">Kumchop Restaurant · Akungba</p>
+              </div>
+            </div>
+
             <div className="receipt-header">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
                 <CheckCircle2 size={20} />

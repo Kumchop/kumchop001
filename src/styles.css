@@ -168,13 +168,28 @@ a:hover {
   gap: 32px;
 }
 .logo-link {
-  width: 150px;
+  width: 148px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.logo-link .brand-logo-img,
+.logo-link img {
+  width: auto;
+  max-width: 156px;
+  height: 52px;
+  object-fit: contain;
+  background-color: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  transition: transform 0.2s ease, opacity 0.2s ease;
   display: block;
 }
-.logo-link img {
-  width: 150px;
-  height: 70px;
-  object-fit: contain;
+.logo-link:hover .brand-logo-img,
+.logo-link:hover img {
+  transform: translateY(-1px);
+  opacity: 0.92;
+  box-shadow: none;
 }
 .desktop-nav {
   display: flex;
@@ -530,10 +545,16 @@ a:hover {
   gap: 48px;
   padding-bottom: 44px;
 }
+.footer-brand .brand-logo-img,
 .footer-brand img {
-  width: 150px;
-  height: 70px;
+  width: auto;
+  max-width: 160px;
+  height: 56px;
   object-fit: contain;
+  background-color: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  display: block;
 }
 .footer-grid h3 {
   font-size: 12px;
@@ -873,9 +894,14 @@ textarea::placeholder {
   .header-actions {
     gap: 7px;
   }
-  .logo-link,
+  .logo-link {
+    width: auto;
+  }
+  .logo-link .brand-logo-img,
   .logo-link img {
-    width: 135px;
+    max-width: 138px;
+    height: 46px;
+    object-fit: contain;
   }
   .hero h1 {
     font-size: 62px;
@@ -1011,10 +1037,14 @@ textarea::placeholder {
   .header-inner {
     height: 72px;
   }
-  .logo-link,
+  .logo-link {
+    width: auto;
+  }
+  .logo-link .brand-logo-img,
   .logo-link img {
-    width: 125px;
-    height: 58px;
+    max-width: 124px;
+    height: 42px;
+    object-fit: contain;
   }
   .hero {
     min-height: 730px;

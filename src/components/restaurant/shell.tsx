@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { CartProvider, useCart } from "./cart";
 import { CartDrawer } from "./cart-drawer";
 import { restaurant } from "@/lib/menu";
-import logo from "@/assets/kumchop-logo.png.asset.json";
 const links = [
   { to: "/", label: "Home" },
   { to: "/menu", label: "Menu" },
@@ -34,7 +33,13 @@ function Header() {
     <header className={`site-header ${scrolled ? "scrolled" : ""}`}>
       <div className="site-container header-inner">
         <Link to="/" aria-label="Kumchop home" className="logo-link">
-          <img src={logo.url} width={1630} height={755} alt="Kumchop — Every Taste Feels Good" />
+          <img
+            src="/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png"
+            width={1830}
+            height={856}
+            alt="Kumchop — Every Taste Feels Good..."
+            className="brand-logo-img"
+          />
         </Link>
         <nav aria-label="Main navigation" className="desktop-nav">
           {links.map((link) => (
@@ -105,8 +110,14 @@ function Footer() {
     <footer className="site-footer">
       <div className="site-container footer-grid">
         <div className="footer-brand">
-          <Link to="/">
-            <img src={logo.url} width={1630} height={755} alt="Kumchop" />
+          <Link to="/" aria-label="Kumchop home" className="logo-link">
+            <img
+              src="/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png"
+              width={1830}
+              height={856}
+              alt="Kumchop — Every Taste Feels Good..."
+              className="brand-logo-img"
+            />
           </Link>
           <p>
             Good food for every mood.

@@ -10,9 +10,12 @@ import icecream from "@/assets/icecream.jpg";
 import fruits from "@/assets/fruits.jpg";
 import { menuRecords } from "./menu-data";
 
+export const BRAND_LOGO_URL = "/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png";
+
 /* ---------- Editable business settings ---------- */
 export const restaurant = {
   name: "Kumchop",
+  logo: BRAND_LOGO_URL,
   // Numbers as listed on kumchop.com.ng. Their purposes are not yet confirmed.
   phones: ["+234 806 773 0012", "+234 813 486 7350", "+234 906 142 3807"],
   // The number WhatsApp orders are sent to. Change here once confirmed.

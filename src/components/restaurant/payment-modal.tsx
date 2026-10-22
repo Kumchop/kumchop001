@@ -142,7 +142,12 @@ export function PaymentModal({
         {/* Header */}
         <div className="payment-header">
           <div>
-            <div className="payment-brand">
+            <div className="payment-brand flex items-center gap-2">
+              <img
+                src="/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png"
+                alt="Kumchop"
+                className="h-8 w-auto object-contain"
+              />
               <span className="payment-badge-secure">
                 <Lock size={12} /> 256-bit Encrypted
               </span>
