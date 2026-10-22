@@ -1,0 +1,5 @@
+{
+  "name": "Kumchop Restaurant",
+  "description": "Meals, snacks and good moments at Kumchop, Akungba Akoko.",
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

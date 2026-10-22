@@ -1,4 +1,5 @@
 # Kumchop website
+
 - [x] Branded pages, real restaurant photo, contact page.
 - [x] Import real menu (79 items, prices, sold-out) from kumchop.com.ng.
 - [x] Order Online page with search, categories, sort, sold-out blocking.
