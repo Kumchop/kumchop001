@@ -28,8 +28,8 @@ function Index() {
         <img
           className="hero-image"
           src={interior}
-          width={768}
-          height={1029}
+          width={896}
+          height={1200}
           alt="Inside Kumchop Restaurant in Akungba Akoko: warm amber ceiling lighting, cozy booth seating, and modern dining room"
           fetchPriority="high"
         />
