@@ -71,16 +71,16 @@ export function CravingFinder() {
       </form>
       <div className="craving-examples">
         {examples.map((x) => (
-          <button key={x} type="button" onClick={() => setText(x)}>
+          <Button variant="outline" size="sm" key={x} type="button" onClick={() => setText(x)}>
             {x}
-          </button>
+          </Button>
         ))}
       </div>
       <fieldset className="craving-avoid">
         <legend>Allergies or ingredients to avoid</legend>
         <div className="craving-examples">
           {AVOID_OPTIONS.map((a) => (
-            <button
+            <Button variant="outline" size="sm"
               key={a}
               type="button"
               aria-pressed={avoid.includes(a)}
@@ -88,7 +88,7 @@ export function CravingFinder() {
               onClick={() => toggle(a)}
             >
               {a}
-            </button>
+            </Button>
           ))}
         </div>
       </fieldset>

@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { RestaurantShell } from "@/components/restaurant/shell";
 import { Toaster } from "sonner";
+import { reportLovableError } from "@/lib/lovable-error-reporting";
 
 function NotFoundComponent() {
   return (
@@ -83,9 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Meals, snacks and good moments at Kumchop, Akungba Akoko." },
       { name: "author", content: "Kumchop" },
       { property: "og:type", content: "website" },
-      { property: "og:image", content: "/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:image", content: "/assets/aistudio/06Oct24_Anis_Free_Upload_b9819ce2.png" },
     ],
     links: [
       {

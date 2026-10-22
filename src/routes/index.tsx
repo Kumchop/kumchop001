@@ -12,6 +12,7 @@ import {
 } from "@/components/restaurant/sections";
 import { pageHead } from "@/lib/menu";
 import { CravingFinder } from "@/components/restaurant/craving-finder";
+import interior from "@/assets/kumchop-interior-clear.jpg";
 export const Route = createFileRoute("/")({
   head: () =>
     pageHead(
@@ -26,29 +27,20 @@ function Index() {
       <section className="hero">
         <img
           className="hero-image"
-          src="/assets/aistudio/IMG-20261017-WA0082_b0a8601d.jpg"
-          width={809}
-          height={1080}
+          src={interior}
+          width={768}
+          height={1029}
           alt="Inside Kumchop Restaurant in Akungba Akoko: warm amber ceiling lighting, cozy booth seating, and modern dining room"
           fetchPriority="high"
         />
         <div className="site-container hero-content">
           <div className="hero-copy">
-            <div className="hero-live-badge">
-              <span className="pulse-dot" />
-              <span>Open for Dine-In & Fast Delivery</span>
-              <span className="pill-separator">·</span>
-              <span>Akungba & AAUA</span>
-            </div>
-            <span className="eyebrow hero-eyebrow-anim">GOOD FOOD. GREAT MOMENTS.</span>
+            <span className="eyebrow hero-eyebrow-anim">AKUNGBA AKOKO · GOOD FOOD. GREAT MOMENTS.</span>
             <h1 className="hero-title-anim">
-              Delicious Meals
-              <br />
-              <em>For Every Craving.</em>
+              Kumchop<span className="hero-tagline">Every Taste Feels Good...</span>
             </h1>
             <p className="hero-description hero-desc-anim">
-              From hearty African dishes and smoky party jollof to loaded shawarma, crispy chicken,
-              and cold refreshing drinks — Kumchop has something for everyone.
+              A place to savour your favourites. African dishes, rice, shawarma and more — made for every craving.
             </p>
             <div className="hero-buttons hero-buttons-anim">
               <Button asChild size="lg">
@@ -60,7 +52,7 @@ function Index() {
             </div>
           </div>
         </div>
-        <span className="hero-note hero-note-anim">Real Food. Real Flavour.</span>
+         <span className="hero-note hero-note-anim">Your table is waiting.</span>
       </section>
       <CravingFinder />
       <Highlights />
