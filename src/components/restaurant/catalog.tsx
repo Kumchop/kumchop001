@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Search, Plus, Minus, SearchX, ShoppingBag, ArrowRight } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { categories, menuItems, money, cartSubtotal, type MenuItem } from "@/lib/menu";
 import { getInventoryOverrides } from "@/lib/orders";
@@ -157,7 +158,16 @@ export function MenuCatalog({
                   ) : qty === 0 ? (
                     <Button
                       size="sm"
-                      onClick={() => change(item.id, 1)}
+                      onClick={() => {
+                        change(item.id, 1);
+                        toast.success(`Added ${item.name} to order`, {
+                          action: {
+                            label: "View Cart",
+                            onClick: () => setDrawerOpen(true),
+                          },
+                          duration: 2500,
+                        });
+                      }}
                       aria-label={`Add ${item.name} to cart`}
                     >
                       <Plus />

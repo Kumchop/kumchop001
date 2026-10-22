@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Sparkles, Plus, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { findItem, money } from "@/lib/menu";
 import { useCart } from "./cart";
@@ -127,7 +128,20 @@ export function CravingFinder() {
                       <p>{p.reason}</p>
                       <strong>{money(it.priceKobo)}</strong>
                     </div>
-                    <Button size="sm" variant="outline" onClick={() => cart.add(it.id)}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        cart.add(it.id);
+                        toast.success(`Added ${it.name} to order`, {
+                          action: {
+                            label: "View Cart",
+                            onClick: () => cart.setDrawerOpen(true),
+                          },
+                          duration: 2500,
+                        });
+                      }}
+                    >
                       <Plus />
                       Add
                     </Button>

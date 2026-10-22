@@ -11,8 +11,8 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { RestaurantShell } from "@/components/restaurant/shell";
+import { Toaster } from "sonner";
 
 function NotFoundComponent() {
   return (
@@ -121,7 +121,6 @@ function RootShell({ children }: { children: ReactNode }) {
     </html>
   );
 }
-
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -131,6 +130,7 @@ function RootComponent() {
       <RestaurantShell>
         <Outlet />
       </RestaurantShell>
+      <Toaster position="top-right" richColors />
     </QueryClientProvider>
   );
 }

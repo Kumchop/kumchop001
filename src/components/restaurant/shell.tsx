@@ -1,10 +1,10 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
-import { Search, ShoppingBag, Menu, X, ArrowUpRight, MapPin } from "lucide-react";
+import { Search, ShoppingBag, Menu, X, ArrowUpRight, MapPin, ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CartProvider, useCart } from "./cart";
 import { CartDrawer } from "./cart-drawer";
-import { restaurant } from "@/lib/menu";
+import { restaurant, money, cartSubtotal } from "@/lib/menu";
 const links = [
   { to: "/", label: "Home" },
   { to: "/menu", label: "Menu" },
@@ -19,7 +19,17 @@ function Header() {
   const { count, setDrawerOpen } = useCart();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [pop, setPop] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    if (count > 0) {
+      setPop(true);
+      const timer = setTimeout(() => setPop(false), 450);
+      return () => clearTimeout(timer);
+    }
+  }, [count]);
+
   useEffect(() => {
     setOpen(false);
   }, [location.pathname]);
@@ -73,7 +83,7 @@ function Header() {
             onClick={() => setDrawerOpen(true)}
           >
             <ShoppingBag size={20} />
-            <span className="cart-count">{count}</span>
+            <span className={`cart-count ${pop ? "animate-pop" : ""}`}>{count}</span>
           </Button>
           <Button asChild className="header-order">
             <Link to="/order">
@@ -183,6 +193,45 @@ function Footer() {
     </footer>
   );
 }
+function BackToTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setShow(window.scrollY > 350);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  if (!show) return null;
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className="back-to-top-btn"
+      aria-label="Scroll back to top"
+      type="button"
+    >
+      <ArrowUp size={20} />
+    </button>
+  );
+}
+
+function MobileCartFloat() {
+  const { count, lines, setDrawerOpen } = useCart();
+  if (count === 0) return null;
+  return (
+    <div className="mobile-cart-float-bar">
+      <div className="mobile-cart-float-info">
+        <ShoppingBag size={18} />
+        <span>
+          {count} {count === 1 ? "item" : "items"} · {money(cartSubtotal(lines))}
+        </span>
+      </div>
+      <button onClick={() => setDrawerOpen(true)} className="mobile-cart-float-btn" type="button">
+        View Cart <ArrowUpRight size={15} />
+      </button>
+    </div>
+  );
+}
+
 export function RestaurantShell({ children }: { children: ReactNode }) {
   return (
     <CartProvider>
@@ -193,6 +242,8 @@ export function RestaurantShell({ children }: { children: ReactNode }) {
       <main id="main-content">{children}</main>
       <Footer />
       <CartDrawer />
+      <BackToTop />
+      <MobileCartFloat />
     </CartProvider>
   );
 }
