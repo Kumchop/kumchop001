@@ -127,13 +127,12 @@ function Checkout() {
         createdAt: new Date().toISOString(),
         customerName: orderData.name,
         customerPhone: orderData.phone,
-        customerEmail: orderData.email,
+        ...(orderData.email ? { customerEmail: orderData.email } : {}),
         orderType: orderData.orderType,
-        deliveryAreaId: selectedArea?.id,
-        deliveryAreaName: selectedArea?.name,
-        deliveryAddress: orderData.address,
-        preferredTime: orderData.time,
-        notes: orderData.notes,
+        ...(selectedArea ? { deliveryAreaId: selectedArea.id, deliveryAreaName: selectedArea.name } : {}),
+        ...(orderData.address ? { deliveryAddress: orderData.address } : {}),
+        ...(orderData.time ? { preferredTime: orderData.time } : {}),
+        ...(orderData.notes ? { notes: orderData.notes } : {}),
         items: lines
           .map((l) => {
             const item = findItem(l.id);
@@ -179,13 +178,12 @@ function Checkout() {
       createdAt: new Date().toISOString(),
       customerName: orderData.name,
       customerPhone: orderData.phone,
-      customerEmail: orderData.email,
+      ...(orderData.email ? { customerEmail: orderData.email } : {}),
       orderType: orderData.orderType,
-      deliveryAreaId: selectedArea?.id,
-      deliveryAreaName: selectedArea?.name,
-      deliveryAddress: orderData.address,
-      preferredTime: orderData.time,
-      notes: orderData.notes,
+      ...(selectedArea ? { deliveryAreaId: selectedArea.id, deliveryAreaName: selectedArea.name } : {}),
+      ...(orderData.address ? { deliveryAddress: orderData.address } : {}),
+      ...(orderData.time ? { preferredTime: orderData.time } : {}),
+      ...(orderData.notes ? { notes: orderData.notes } : {}),
       items: lines
         .map((l) => {
           const item = findItem(l.id);

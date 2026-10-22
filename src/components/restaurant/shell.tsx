@@ -28,6 +28,7 @@ function Header() {
       const timer = setTimeout(() => setPop(false), 450);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [count]);
 
   useEffect(() => {
@@ -203,14 +204,14 @@ function BackToTop() {
 
   if (!show) return null;
   return (
-    <button
+    <Button variant="ghost" size="icon"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       className="back-to-top-btn"
       aria-label="Scroll back to top"
       type="button"
     >
       <ArrowUp size={20} />
-    </button>
+    </Button>
   );
 }
 
@@ -225,9 +226,9 @@ function MobileCartFloat() {
           {count} {count === 1 ? "item" : "items"} · {money(cartSubtotal(lines))}
         </span>
       </div>
-      <button onClick={() => setDrawerOpen(true)} className="mobile-cart-float-btn" type="button">
+      <Button onClick={() => setDrawerOpen(true)} className="mobile-cart-float-btn" type="button">
         View Cart <ArrowUpRight size={15} />
-      </button>
+      </Button>
     </div>
   );
 }

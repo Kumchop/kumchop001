@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { categories } from "@/lib/menu";
 import feast from "@/assets/kumchop-feast.jpg";
+import interior from "@/assets/kumchop-interior-clear.jpg";
 
 export function Highlights() {
   return (
@@ -80,7 +81,7 @@ export function StorySection({ full = false }: { full?: boolean }) {
       <div className="site-container story-grid">
         <div className="story-photo">
           <img
-            src="/assets/aistudio/IMG-20261017-WA0082_b0a8601d.jpg"
+            src={interior}
             alt="Inside Kumchop: warm lighting, comfortable seating and welcoming dining tables"
             width={809}
             height={1080}
@@ -228,6 +229,8 @@ export function Reviews() {
   const prev = () => setActive((i) => (i - 1 + customerReviews.length) % customerReviews.length);
   const next = () => setActive((i) => (i + 1) % customerReviews.length);
 
+  if (!current) return null;
+
   return (
     <section
       className="review-section section"
@@ -300,10 +303,7 @@ export function StoryButton() {
   return (
     <Button variant="ghost" size="lg" asChild>
       <Link to="/about">
-        <span className="play-circle">
-          <Play size={14} fill="currentColor" />
-        </span>
-        Watch Our Story
+        Our Story <ArrowRight size={16} />
       </Link>
     </Button>
   );

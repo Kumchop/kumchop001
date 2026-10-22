@@ -14,3 +14,4 @@
 - Use a shared restaurant shell in the root route and dedicated content routes for each navigation destination so navigation and metadata remain consistent.
 - Keep illustrative menu records and cart calculations in browser-safe modules; persist only the cart locally and block live submission until restaurant details are configured.
 - Centralize the visual system in src/styles.css and use the shared Button component for interactive commands.
+- Keep the enhanced interior photo shared by homepage and story views; use overlay tokens rather than image blur so the restaurant remains recognizable.
