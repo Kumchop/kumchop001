@@ -24,6 +24,8 @@ export type RestaurantOrder = {
   items: OrderItem[];
   subtotalKobo: number;
   deliveryFeeKobo: number;
+  takeawayFeeKobo?: number;
+  hasTakeawayPackaging?: boolean;
   totalKobo: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;

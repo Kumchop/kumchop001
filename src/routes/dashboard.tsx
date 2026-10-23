@@ -18,9 +18,24 @@ import {
   MapPin,
   ChevronRight,
   Filter,
+  ImageOff,
+  Image,
+  Upload,
+  Trash2,
+  X,
+  PackageCheck,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { menuItems, money, categories, pageHead, MenuItem } from "@/lib/menu";
+import {
+  getFullActiveMenu,
+  saveCustomDish,
+  deleteCustomDish,
+  setDishImageRemoved,
+  setDishCustomImage,
+  itemRequiresTakeaway,
+} from "@/lib/menu-custom";
 import {
   getStoredOrders,
   updateOrderStatus,
@@ -47,7 +62,7 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-const DEFAULT_PIN = "2026";
+const DEFAULT_PIN = "@Kumchop##";
 
 function DashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -62,6 +77,21 @@ function DashboardPage() {
   const [inventoryOverrides, setOverrides] = useState<Record<string, boolean>>({});
   const [dishSearch, setDishSearch] = useState("");
   const [dishCategory, setDishCategory] = useState("all");
+
+  // All menu dishes (combining base records + custom dishes with removed images applied)
+  const [allMenuDishes, setAllMenuDishes] = useState<MenuItem[]>(() =>
+    typeof window !== "undefined" ? getFullActiveMenu() : menuItems,
+  );
+
+  // New Dish form state
+  const [showAddDish, setShowAddDish] = useState(false);
+  const [newDishName, setNewDishName] = useState("");
+  const [newDishCategory, setNewDishCategory] = useState("rice");
+  const [newDishPriceNaira, setNewDishPriceNaira] = useState("");
+  const [newDishImage, setNewDishImage] = useState(
+    "/src/assets/images/jollof_rice_platter_1792355346443.jpg",
+  );
+  const [newDishRequiresTakeaway, setNewDishRequiresTakeaway] = useState(true);
 
   const [deliveryAreas, setDeliveryAreas] = useState<DeliveryArea[]>([]);
   const [editingAreaId, setEditingAreaId] = useState<string | null>(null);
@@ -84,6 +114,7 @@ function DashboardPage() {
     setOrders(getStoredOrders());
     setOverrides(getInventoryOverrides());
     setDeliveryAreas(getDeliveryAreas());
+    setAllMenuDishes(getFullActiveMenu());
   };
 
   useEffect(() => {
@@ -91,21 +122,24 @@ function DashboardPage() {
     const handleOrderUpdate = () => setOrders(getStoredOrders());
     const handleInvUpdate = () => setOverrides(getInventoryOverrides());
     const handleAreaUpdate = () => setDeliveryAreas(getDeliveryAreas());
+    const handleMenuUpdate = () => setAllMenuDishes(getFullActiveMenu());
 
     window.addEventListener("kumchop-orders-updated", handleOrderUpdate);
     window.addEventListener("kumchop-inventory-updated", handleInvUpdate);
     window.addEventListener("kumchop-areas-updated", handleAreaUpdate);
+    window.addEventListener("kumchop-menu-updated", handleMenuUpdate);
 
     return () => {
       window.removeEventListener("kumchop-orders-updated", handleOrderUpdate);
       window.removeEventListener("kumchop-inventory-updated", handleInvUpdate);
       window.removeEventListener("kumchop-areas-updated", handleAreaUpdate);
+      window.removeEventListener("kumchop-menu-updated", handleMenuUpdate);
     };
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput.trim() === DEFAULT_PIN || pinInput.trim() === "kumchop") {
+    if (pinInput.trim() === DEFAULT_PIN) {
       setIsAuthenticated(true);
       sessionStorage.setItem("kumchop-staff-auth", "true");
       setPinError(false);
@@ -114,14 +148,92 @@ function DashboardPage() {
     }
   };
 
-  const handleQuickUnlock = () => {
-    setIsAuthenticated(true);
-    sessionStorage.setItem("kumchop-staff-auth", "true");
-  };
-
   const handleStatusChange = (orderId: string, newStatus: OrderStatus) => {
     updateOrderStatus(orderId, newStatus);
     refreshData();
+  };
+
+  const handleCategorySelect = (catId: string) => {
+    setNewDishCategory(catId);
+    if (catId === "snacks" || catId === "drinks" || catId === "ice-cream") {
+      setNewDishRequiresTakeaway(false);
+    } else {
+      setNewDishRequiresTakeaway(true);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setNewDishImage(reader.result);
+          toast.success("Cover image selected!");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleCreateDish = (e: React.FormEvent) => {
+    e.preventDefault();
+    const naira = parseInt(newDishPriceNaira.replace(/\D/g, ""), 10);
+    if (!newDishName.trim()) {
+      toast.error("Please enter a dish name.");
+      return;
+    }
+    if (isNaN(naira) || naira <= 0) {
+      toast.error("Please enter a valid price in Naira.");
+      return;
+    }
+
+    saveCustomDish({
+      name: newDishName.trim(),
+      category: newDishCategory,
+      priceKobo: naira * 100,
+      image: newDishImage,
+      requiresTakeaway: newDishRequiresTakeaway,
+    });
+
+    toast.success(`"${newDishName}" added to the Kumchop menu!`);
+    setNewDishName("");
+    setNewDishPriceNaira("");
+    setShowAddDish(false);
+    refreshData();
+  };
+
+  const handleToggleDishImage = (dishId: string, remove: boolean) => {
+    setDishImageRemoved(dishId, remove);
+    if (remove) {
+      toast.info("Image removed from menu for this dish.");
+    } else {
+      toast.success("Image restored to menu for this dish.");
+    }
+    refreshData();
+  };
+
+  const handleUploadDishCover = (dishId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setDishCustomImage(dishId, reader.result);
+          toast.success("Cover image updated for this dish!");
+          refreshData();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDeleteCustomDish = (dishId: string, dishName: string) => {
+    if (confirm(`Remove "${dishName}" permanently from the menu?`)) {
+      deleteCustomDish(dishId);
+      toast.info(`Removed "${dishName}" from menu.`);
+      refreshData();
+    }
   };
 
   const handleToggleDishStock = (dishId: string, currentSoldOut: boolean) => {
@@ -218,7 +330,7 @@ function DashboardPage() {
     return item.soldOut;
   };
 
-  const soldOutCount = menuItems.filter((i) => getEffectiveSoldOut(i)).length;
+  const soldOutCount = allMenuDishes.filter((i) => getEffectiveSoldOut(i)).length;
 
   if (!isAuthenticated) {
     return (
@@ -235,20 +347,18 @@ function DashboardPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs font-semibold block text-left mb-1.5">
-                Staff PIN (Default: 2026)
-              </label>
+              <label className="text-xs font-semibold block text-left mb-1.5">Staff Passcode</label>
               <input
                 type="password"
-                placeholder="Enter 4-digit PIN"
+                placeholder="Enter admin passcode"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                className="text-center text-lg tracking-widest font-mono"
+                className="text-center text-lg tracking-wider font-mono"
                 autoFocus
               />
               {pinError && (
                 <p className="text-xs text-destructive mt-1 text-left">
-                  Incorrect PIN. Please use 2026.
+                  Incorrect passcode. Please try again.
                 </p>
               )}
             </div>
@@ -257,18 +367,6 @@ function DashboardPage() {
               <Unlock size={16} /> Unlock Dashboard
             </Button>
           </form>
-
-          <div className="mt-4 pt-4 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleQuickUnlock}
-              className="w-full text-xs"
-            >
-              1-Click Instant Staff Access
-            </Button>
-          </div>
         </div>
       </div>
     );
@@ -503,9 +601,13 @@ function DashboardPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-xs text-muted-foreground block">
-                              Subtotal: {money(order.subtotalKobo)}{" "}
-                              {order.deliveryFeeKobo > 0 &&
-                                `+ Delivery ${money(order.deliveryFeeKobo)}`}
+                              Subtotal: {money(order.subtotalKobo)}
+                              {order.takeawayFeeKobo && order.takeawayFeeKobo > 0
+                                ? ` + Pack ${money(order.takeawayFeeKobo)}`
+                                : ""}
+                              {order.deliveryFeeKobo > 0
+                                ? ` + Delivery ${money(order.deliveryFeeKobo)}`
+                                : ""}
                             </span>
                             <strong className="text-base font-bold text-primary">
                               Total: {money(order.totalKobo)}
@@ -569,33 +671,241 @@ function DashboardPage() {
           </div>
         )}
 
-        {/* ===================== TAB 2: INVENTORY & SOLD-OUT ===================== */}
+        {/* ===================== TAB 2: INVENTORY & DISH MANAGEMENT ===================== */}
         {activeTab === "inventory" && (
           <div className="space-y-6">
             <div className="dashboard-intro-banner flex-wrap items-center justify-between">
               <div className="flex gap-3 items-start flex-1 min-w-[280px]">
                 <AlertTriangle className="text-amber-400 flex-shrink-0 mt-0.5" size={20} />
                 <div>
-                  <h4>Live Dish Availability</h4>
+                  <h4>Live Dish Availability & Menu Controls</h4>
                   <p>
-                    Most dishes were flagged as sold-out in the original site import. You can
-                    restock all dishes with 1-click or toggle individual dishes below.
+                    Manage dishes, add new items with cover images, remove images from the menu, or
+                    toggle stock availability.
                   </p>
                 </div>
               </div>
-              <Button
-                size="sm"
-                onClick={() => {
-                  menuItems.forEach((i) => {
-                    if (i.id !== "5-alive") setDishSoldOut(i.id, false);
-                  });
-                  refreshData();
-                }}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white flex-shrink-0"
-              >
-                <CheckCircle2 size={15} /> Restock All Dishes to Available
-              </Button>
+              <div className="flex gap-2 flex-wrap items-center">
+                <Button
+                  size="sm"
+                  onClick={() => setShowAddDish(!showAddDish)}
+                  className="gap-1.5 flex-shrink-0"
+                >
+                  {showAddDish ? <X size={15} /> : <Plus size={15} />}
+                  {showAddDish ? "Close Form" : "Add New Dish"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    allMenuDishes.forEach((i) => {
+                      if (i.id !== "5-alive") setDishSoldOut(i.id, false);
+                    });
+                    refreshData();
+                    toast.success("Restocked all dishes to In Stock!");
+                  }}
+                  className="border-emerald-600 text-emerald-400 hover:bg-emerald-500/10 flex-shrink-0"
+                >
+                  <CheckCircle2 size={15} /> Restock All Dishes
+                </Button>
+              </div>
             </div>
+
+            {/* Add New Dish Form */}
+            {showAddDish && (
+              <form onSubmit={handleCreateDish} className="dashboard-form-card space-y-4">
+                <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                  <div>
+                    <h3 className="text-base font-bold text-foreground">
+                      Add New Dish to Kumchop Menu
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Enter dish name, naira price, category, cover photo and packaging rules.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddDish(false)}
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <label className="text-xs font-semibold block mb-1.5 text-foreground">
+                      Dish Name *
+                    </label>
+                    <input
+                      placeholder="e.g. Ofada Rice & Assorted Ayamase"
+                      value={newDishName}
+                      onChange={(e) => setNewDishName(e.target.value)}
+                      required
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold block mb-1.5 text-foreground">
+                      Category *
+                    </label>
+                    <select
+                      value={newDishCategory}
+                      onChange={(e) => handleCategorySelect(e.target.value)}
+                      className="w-full"
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold block mb-1.5 text-foreground">
+                      Price in Naira (₦) *
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 2500"
+                      value={newDishPriceNaira}
+                      onChange={(e) => setNewDishPriceNaira(e.target.value)}
+                      required
+                      min={50}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Packaging Requirement checkbox */}
+                <div className="p-3 rounded-md bg-secondary/80 border border-border">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={newDishRequiresTakeaway}
+                      onChange={(e) => setNewDishRequiresTakeaway(e.target.checked)}
+                      className="mt-0.5 accent-primary"
+                    />
+                    <div>
+                      <strong className="text-xs block text-foreground">
+                        Require Compulsory Takeaway Packaging at Checkout
+                      </strong>
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {newDishRequiresTakeaway
+                          ? "Yes — this is a cooked meal (e.g. rice, swallow, soup, beans). Customers must pick the takeaway packaging pack."
+                          : "No — this is a snack, drink or pastry. Customers can checkout without picking takeaway packaging."}
+                      </span>
+                    </div>
+                  </label>
+                </div>
+
+                {/* Cover Image Selection */}
+                <div>
+                  <label className="text-xs font-semibold block mb-2 text-foreground">
+                    Cover Photo (Choose Preset or Upload Custom Image) *
+                  </label>
+                  <div className="grid gap-3 sm:grid-cols-4 items-center">
+                    <div className="flex flex-col items-center gap-1.5 p-2 bg-secondary rounded border border-border">
+                      <span className="text-[10px] text-muted-foreground font-semibold">
+                        Active Preview
+                      </span>
+                      <img
+                        src={newDishImage}
+                        alt="Preview"
+                        className="w-20 h-20 rounded object-cover border border-border"
+                      />
+                    </div>
+
+                    <div className="sm:col-span-3 space-y-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded cursor-pointer hover:bg-primary/90 transition-colors">
+                          <Upload size={14} /> Upload Cover from Device
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                          />
+                        </label>
+                        <span className="text-xs text-muted-foreground">
+                          or select a food photo preset below:
+                        </span>
+                      </div>
+
+                      <div className="flex gap-2 overflow-x-auto pb-1 pt-1">
+                        {[
+                          {
+                            label: "Jollof Rice",
+                            url: "/src/assets/images/jollof_rice_platter_1792355346443.jpg",
+                          },
+                          {
+                            label: "Pounded Yam",
+                            url: "/src/assets/images/pounded_yam_egusi_1792355347234.jpg",
+                          },
+                          {
+                            label: "Amala & Ewedu",
+                            url: "/src/assets/images/dark_amala_ewedu_1792356311794.jpg",
+                          },
+                          {
+                            label: "Pepper Soup",
+                            url: "/src/assets/images/goat_meat_pepper_soup_1792356311651.jpg",
+                          },
+                          {
+                            label: "Peppered Fish",
+                            url: "/src/assets/images/peppered_fish_grill_1792355348130.jpg",
+                          },
+                          {
+                            label: "Shawarma",
+                            url: "/src/assets/images/fresh_shawarma_wrap_1792355347438.jpg",
+                          },
+                          {
+                            label: "Meat Pie",
+                            url: "/src/assets/images/nigerian_meat_pie_1792356310065.jpg",
+                          },
+                          {
+                            label: "Parfait",
+                            url: "/src/assets/images/layered_yogurt_parfait_1792356311845.jpg",
+                          },
+                        ].map((preset) => (
+                          <button
+                            type="button"
+                            key={preset.label}
+                            onClick={() => setNewDishImage(preset.url)}
+                            className={`flex flex-col items-center gap-1 p-1 rounded border transition-all flex-shrink-0 ${newDishImage === preset.url ? "border-primary ring-2 ring-primary/40" : "border-border/60 hover:border-border"}`}
+                          >
+                            <img
+                              src={preset.url}
+                              alt={preset.label}
+                              className="w-12 h-12 rounded object-cover"
+                            />
+                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                              {preset.label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2 border-t border-border/40">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddDish(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" size="sm" className="gap-1.5 font-semibold">
+                    <Plus size={15} /> Save Dish to Menu
+                  </Button>
+                </div>
+              </form>
+            )}
 
             <div className="dashboard-toolbar">
               <div className="search-field flex-1 max-w-md">
@@ -622,7 +932,7 @@ function DashboardPage() {
             </div>
 
             <div className="inventory-grid">
-              {menuItems
+              {allMenuDishes
                 .filter((item) => {
                   const matchesCat =
                     dishCategory === "all" || item.categories.includes(dishCategory);
@@ -636,19 +946,99 @@ function DashboardPage() {
                   return (
                     <div
                       key={dish.id}
-                      className={`inventory-card ${isSoldOut ? "is-sold-out" : ""}`}
+                      className={`inventory-card ${isSoldOut ? "is-sold-out" : ""} ${dish.imageRemoved ? "is-image-removed" : ""}`}
                     >
-                      <img
-                        src={dish.image}
-                        alt={dish.name}
-                        className="inventory-thumb"
-                        loading="lazy"
-                      />
+                      {dish.image && !dish.imageRemoved ? (
+                        <img
+                          src={dish.image}
+                          alt={dish.name}
+                          className="inventory-thumb"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="inventory-thumb-placeholder">
+                          <ImageOff size={16} />
+                          <span>No Image</span>
+                        </div>
+                      )}
+
                       <div className="inventory-info">
-                        <span className="inventory-cat">{dish.category}</span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inventory-cat">{dish.category}</span>
+                          {dish.id.startsWith("custom-") && (
+                            <span className="text-[9px] bg-primary/20 text-primary font-bold px-1.5 py-0.2 rounded">
+                              CUSTOM
+                            </span>
+                          )}
+                          {dish.requiresTakeaway ? (
+                            <span
+                              className="text-[9px] bg-amber-500/15 text-amber-300 px-1 py-0.2 rounded"
+                              title="Takeaway pack compulsory at checkout"
+                            >
+                              Pack Req.
+                            </span>
+                          ) : (
+                            <span
+                              className="text-[9px] text-muted-foreground/80 px-1 py-0.2 rounded"
+                              title="Takeaway pack optional at checkout"
+                            >
+                              Pack Optional
+                            </span>
+                          )}
+                        </div>
+
                         <h4>{dish.name}</h4>
                         <strong className="text-sm">{money(dish.priceKobo)}</strong>
+
+                        {/* Image Management Actions */}
+                        <div className="inventory-image-strip">
+                          {!dish.imageRemoved ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleDishImage(dish.id, true)}
+                              className="text-[11px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors"
+                              title="Remove image from menu display"
+                            >
+                              <ImageOff size={12} /> Remove image
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-amber-400 font-medium">
+                                Image removed
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleDishImage(dish.id, false)}
+                                className="text-[11px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-colors"
+                                title="Restore original image"
+                              >
+                                <Image size={12} /> Restore
+                              </button>
+                            </div>
+                          )}
+                          <label className="text-[11px] text-primary/80 hover:text-primary cursor-pointer flex items-center gap-1 ml-auto">
+                            <Upload size={11} />
+                            Change
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleUploadDishCover(dish.id, e)}
+                            />
+                          </label>
+                          {dish.id.startsWith("custom-") && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteCustomDish(dish.id, dish.name)}
+                              className="text-[11px] text-destructive/80 hover:text-destructive flex items-center gap-1"
+                              title="Delete this custom dish"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
+
                       <div className="inventory-action">
                         <span className={`inventory-state-tag ${isSoldOut ? "out" : "in"}`}>
                           {isSoldOut ? "Sold Out" : "In Stock"}

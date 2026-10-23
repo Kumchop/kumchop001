@@ -10,6 +10,7 @@ import {
   menuItems,
   findItem,
 } from "@/lib/menu";
+import { itemRequiresTakeaway } from "@/lib/menu-custom";
 import { filterMenu } from "@/components/restaurant/catalog";
 
 describe("Kumchop menu and cart rules", () => {
@@ -66,5 +67,22 @@ describe("Kumchop menu and cart rules", () => {
     expect(whatsappUrl([{ id: "coke", quantity: 2 }], o)).toMatch(
       /^https:\/\/wa\.me\/2348067730012\?text=/,
     );
+  });
+  it("enforces compulsory takeaway packaging for cooked food but not snacks", () => {
+    // Cooked meals (rice, swallow, soup, beans) require takeaway packaging
+    expect(itemRequiresTakeaway({ name: "Jollof Rice", category: "rice" })).toBe(true);
+    expect(itemRequiresTakeaway({ name: "Amala", category: "swallow" })).toBe(true);
+    expect(itemRequiresTakeaway({ name: "Pepper Soup", category: "soup" })).toBe(true);
+
+    // Snacks, pastries, drinks do NOT require compulsory takeaway packaging
+    expect(itemRequiresTakeaway({ name: "Meat Pie", category: "snacks" })).toBe(false);
+    expect(itemRequiresTakeaway({ name: "Coke", category: "drinks" })).toBe(false);
+  });
+  it("calculates order total including delivery and takeaway pack fee", () => {
+    const lines = [{ id: "coke", quantity: 1 }]; // ₦800 = 80000 kobo
+    // pickup with takeaway fee
+    expect(orderTotal(lines, "pickup", 0, 20000)).toBe(100000);
+    // delivery with delivery fee and takeaway fee
+    expect(orderTotal(lines, "delivery", 50000, 20000)).toBe(150000);
   });
 });

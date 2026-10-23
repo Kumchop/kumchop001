@@ -92,6 +92,15 @@ const pepperSoup = "/src/assets/images/goat_meat_pepper_soup_1792356311651.jpg";
 const amalaEwedu = "/src/assets/images/dark_amala_ewedu_1792356311794.jpg";
 const parfaitDessert = "/src/assets/images/layered_yogurt_parfait_1792356311845.jpg";
 
+import {
+  getStoredCustomDishes,
+  isDishImageRemoved,
+  getCustomImageMap,
+  itemRequiresTakeaway,
+  cartHasCompulsoryTakeaway,
+  TAKEAWAY_PACK_FEE_KOBO,
+} from "./menu-custom";
+
 export type MenuItemRecord = {
   id: string;
   name: string;
@@ -100,8 +109,14 @@ export type MenuItemRecord = {
   priceKobo: number;
   soldOut: boolean;
   reviewNote?: string;
+  requiresTakeaway?: boolean;
+  imageRemoved?: boolean;
 };
-export type MenuItem = MenuItemRecord & { image: string };
+export type MenuItem = MenuItemRecord & {
+  image: string;
+  requiresTakeaway?: boolean;
+  imageRemoved?: boolean;
+};
 
 const imageFor = (r: MenuItemRecord) => {
   const n = r.name.toLowerCase();
@@ -197,7 +212,41 @@ const imageFor = (r: MenuItemRecord) => {
   return categories.find((c) => c.id === r.category)?.image ?? rice;
 };
 export const menuItems: MenuItem[] = menuRecords.map((r) => ({ ...r, image: imageFor(r) }));
-export const findItem = (id: string) => menuItems.find((i) => i.id === id);
+export const findItem = (id: string): MenuItem | undefined => {
+  if (typeof window !== "undefined") {
+    try {
+      const customDishes = getStoredCustomDishes();
+      const custom = customDishes.find((i) => i.id === id);
+      if (custom) {
+        const isRemoved = isDishImageRemoved(id);
+        const customImg = getCustomImageMap()[id];
+        return {
+          ...custom,
+          image: isRemoved ? "" : (customImg ?? custom.image),
+          imageRemoved: isRemoved,
+          requiresTakeaway: itemRequiresTakeaway(custom),
+        };
+      }
+    } catch {
+      // localStorage fallback
+    }
+  }
+
+  const base = menuItems.find((i) => i.id === id);
+  if (!base) return undefined;
+
+  if (typeof window !== "undefined") {
+    const isRemoved = isDishImageRemoved(id);
+    const customImg = getCustomImageMap()[id];
+    return {
+      ...base,
+      image: isRemoved ? "" : (customImg ?? base.image),
+      imageRemoved: isRemoved,
+      requiresTakeaway: itemRequiresTakeaway(base),
+    };
+  }
+  return base;
+};
 
 /* ---------- Money (integer kobo) ---------- */
 export const money = (kobo: number) =>
@@ -221,7 +270,8 @@ export const orderTotal = (
   lines: CartLine[],
   orderType: "pickup" | "delivery",
   areaFeeKobo?: number | null | undefined,
-) => cartSubtotal(lines) + (deliveryFee(orderType, areaFeeKobo) ?? 0);
+  takeawayFeeKobo?: number | null | undefined,
+) => cartSubtotal(lines) + (deliveryFee(orderType, areaFeeKobo) ?? 0) + (takeawayFeeKobo ?? 0);
 export const cartCount = (lines: CartLine[]) => lines.reduce((t, l) => t + l.quantity, 0);
 export const canAdd = (id: string) => {
   const item = findItem(id);
@@ -258,6 +308,9 @@ export type OrderDetails = {
   orderType: "pickup" | "delivery";
   deliveryArea?: string | undefined;
   deliveryFeeKobo?: number | null | undefined;
+  takeawayFeeKobo?: number | null | undefined;
+  hasTakeawayPackaging?: boolean | undefined;
+  isTakeawayCompulsory?: boolean | undefined;
   address?: string | undefined;
   time?: string | undefined;
   notes?: string | undefined;
@@ -276,6 +329,13 @@ export function buildWhatsAppMessage(lines: CartLine[], o: OrderDetails) {
     const it = findItem(l.id)!;
     return `• ${l.quantity} × ${it.name} @ ${money(it.priceKobo)} = ${money(lineTotal(l))}`;
   });
+  const packagingText =
+    o.takeawayFeeKobo && o.takeawayFeeKobo > 0
+      ? `Packaging: Takeaway container included (${money(o.takeawayFeeKobo)})`
+      : o.hasTakeawayPackaging === false
+        ? `Packaging: Standard bakery bag (Snacks/pastries only - container optional)`
+        : null;
+
   return [
     "*KUMCHOP — New order request*",
     "",
@@ -286,6 +346,7 @@ export function buildWhatsAppMessage(lines: CartLine[], o: OrderDetails) {
     o.orderType === "delivery" && o.deliveryArea ? `Delivery area: ${o.deliveryArea}` : null,
     o.orderType === "delivery" && o.address ? `Delivery address: ${o.address}` : null,
     o.time ? `Preferred time: ${o.time}` : null,
+    packagingText,
     o.paymentStatus === "paid"
       ? `Payment: PAID via ${(o.paymentMethod ?? "online").toUpperCase()} (Ref: ${o.paymentReference ?? "Confirmed"})`
       : null,
@@ -294,10 +355,13 @@ export function buildWhatsAppMessage(lines: CartLine[], o: OrderDetails) {
     ...rows,
     "",
     `Subtotal: ${money(cartSubtotal(lines))}`,
+    o.takeawayFeeKobo && o.takeawayFeeKobo > 0
+      ? `Takeaway packaging: ${money(o.takeawayFeeKobo)}`
+      : null,
     o.orderType === "delivery"
       ? `Delivery fee: ${fee === null ? "to be confirmed by Kumchop" : money(fee)}`
       : null,
-    `Total: ${money(orderTotal(lines, o.orderType, o.deliveryFeeKobo))}${o.orderType === "delivery" && fee === null ? " + delivery fee" : ""}`,
+    `Total: ${money(orderTotal(lines, o.orderType, o.deliveryFeeKobo, o.takeawayFeeKobo))}${o.orderType === "delivery" && fee === null ? " + delivery fee" : ""}`,
     o.notes ? `\nNotes: ${o.notes}` : null,
     "",
     o.paymentStatus === "paid"

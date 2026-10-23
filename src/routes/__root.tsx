@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -14,6 +15,11 @@ import appCss from "../styles.css?url";
 import { RestaurantShell } from "@/components/restaurant/shell";
 import { Toaster } from "sonner";
 import { reportLovableError } from "@/lib/lovable-error-reporting";
+import {
+  LoadingScreen,
+  StartupLoadingScreen,
+  TopRouteLoader,
+} from "@/components/restaurant/loading-screen";
 
 function NotFoundComponent() {
   return (
@@ -103,6 +109,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
+  pendingComponent: LoadingScreen,
   notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
@@ -122,9 +129,14 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isNavigating = useRouterState({
+    select: (s) => s.status === "pending",
+  });
 
   return (
     <QueryClientProvider client={queryClient}>
+      <StartupLoadingScreen />
+      <TopRouteLoader isNavigating={isNavigating} />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <RestaurantShell>
         <Outlet />

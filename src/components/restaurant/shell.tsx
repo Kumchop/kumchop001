@@ -204,7 +204,9 @@ function BackToTop() {
 
   if (!show) return null;
   return (
-    <Button variant="ghost" size="icon"
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       className="back-to-top-btn"
       aria-label="Scroll back to top"

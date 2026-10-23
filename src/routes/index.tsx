@@ -35,12 +35,15 @@ function Index() {
         />
         <div className="site-container hero-content">
           <div className="hero-copy">
-            <span className="eyebrow hero-eyebrow-anim">AKUNGBA AKOKO · GOOD FOOD. GREAT MOMENTS.</span>
+            <span className="eyebrow hero-eyebrow-anim">
+              AKUNGBA AKOKO · GOOD FOOD. GREAT MOMENTS.
+            </span>
             <h1 className="hero-title-anim">
               Kumchop<span className="hero-tagline">Every Taste Feels Good...</span>
             </h1>
             <p className="hero-description hero-desc-anim">
-              A place to savour your favourites. African dishes, rice, shawarma and more — made for every craving.
+              A place to savour your favourites. African dishes, rice, shawarma and more — made for
+              every craving.
             </p>
             <div className="hero-buttons hero-buttons-anim">
               <Button asChild size="lg">
@@ -52,7 +55,7 @@ function Index() {
             </div>
           </div>
         </div>
-         <span className="hero-note hero-note-anim">Your table is waiting.</span>
+        <span className="hero-note hero-note-anim">Your table is waiting.</span>
       </section>
       <CravingFinder />
       <Highlights />

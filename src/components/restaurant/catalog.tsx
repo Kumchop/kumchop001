@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Search, Plus, Minus, SearchX, ShoppingBag, ArrowRight } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Minus,
+  SearchX,
+  ShoppingBag,
+  ArrowRight,
+  UtensilsCrossed,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { categories, menuItems, money, cartSubtotal, type MenuItem } from "@/lib/menu";
 import { getInventoryOverrides } from "@/lib/orders";
+import { getFullActiveMenu } from "@/lib/menu-custom";
 import { useCart } from "./cart";
 
 export type SortKey = "name" | "price-asc" | "price-desc";
@@ -52,16 +61,29 @@ export function MenuCatalog({
   const [query, setQuery] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
   const [invOverrides, setInvOverrides] = useState<Record<string, boolean>>({});
+  const [allMenuDishes, setAllMenuDishes] = useState<MenuItem[]>(() =>
+    typeof window !== "undefined" ? getFullActiveMenu() : menuItems,
+  );
   const { lines, change, count, setDrawerOpen } = useCart();
 
   useEffect(() => {
     setInvOverrides(getInventoryOverrides());
-    const handleUpdate = () => setInvOverrides(getInventoryOverrides());
+    setAllMenuDishes(getFullActiveMenu());
+
+    const handleUpdate = () => {
+      setInvOverrides(getInventoryOverrides());
+      setAllMenuDishes(getFullActiveMenu());
+    };
+
     window.addEventListener("kumchop-inventory-updated", handleUpdate);
-    return () => window.removeEventListener("kumchop-inventory-updated", handleUpdate);
+    window.addEventListener("kumchop-menu-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("kumchop-inventory-updated", handleUpdate);
+      window.removeEventListener("kumchop-menu-updated", handleUpdate);
+    };
   }, []);
 
-  const liveMenuItems = menuItems.map((item) => ({
+  const liveMenuItems = allMenuDishes.map((item) => ({
     ...item,
     soldOut: item.id in invOverrides ? (invOverrides[item.id] ?? item.soldOut) : item.soldOut,
   }));
@@ -139,10 +161,22 @@ export function MenuCatalog({
           const qty = lines.find((l) => l.id === item.id)?.quantity ?? 0;
           return (
             <article className={`food-card ${item.soldOut ? "is-sold-out" : ""}`} key={item.id}>
-              <div className="food-photo">
-                <img src={item.image} width={400} height={400} alt={item.name} loading="lazy" />
-                {item.soldOut && <span className="sold-badge">Sold out</span>}
-              </div>
+              {item.image && !item.imageRemoved ? (
+                <div className="food-photo">
+                  <img src={item.image} width={400} height={400} alt={item.name} loading="lazy" />
+                  {item.soldOut && <span className="sold-badge">Sold out</span>}
+                </div>
+              ) : (
+                <div className="food-photo food-photo-placeholder">
+                  <div className="no-photo-badge">
+                    <UtensilsCrossed size={26} className="text-muted-foreground/60 mb-1" />
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Kumchop Kitchen
+                    </span>
+                  </div>
+                  {item.soldOut && <span className="sold-badge">Sold out</span>}
+                </div>
+              )}
               <div className="food-body">
                 <span className="food-cat">{catName(item.category)}</span>
                 <h3>{item.name}</h3>

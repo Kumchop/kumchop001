@@ -80,7 +80,9 @@ export function CravingFinder() {
         <legend>Allergies or ingredients to avoid</legend>
         <div className="craving-examples">
           {AVOID_OPTIONS.map((a) => (
-            <Button variant="outline" size="sm"
+            <Button
+              variant="outline"
+              size="sm"
               key={a}
               type="button"
               aria-pressed={avoid.includes(a)}

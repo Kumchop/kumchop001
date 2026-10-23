@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, UtensilsCrossed } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -20,7 +20,13 @@ export function CartLines({ compact = false }: { compact?: boolean }) {
         if (!item) return null;
         return (
           <article className={`cart-line ${compact ? "compact" : ""}`} key={line.id}>
-            <img src={item.image} width={80} height={80} alt={item.name} loading="lazy" />
+            {item.image && !item.imageRemoved ? (
+              <img src={item.image} width={80} height={80} alt={item.name} loading="lazy" />
+            ) : (
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-secondary rounded flex flex-col items-center justify-center text-muted-foreground border border-border">
+                <UtensilsCrossed size={18} />
+              </div>
+            )}
             <div>
               <h3>{item.name}</h3>
               <p>{money(item.priceKobo)} each</p>

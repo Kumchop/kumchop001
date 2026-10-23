@@ -9,6 +9,8 @@ import {
   Clock,
   Sparkles,
   ShoppingBag,
+  PackageCheck,
+  UtensilsCrossed,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/components/restaurant/cart";
@@ -25,6 +27,7 @@ import {
   pageHead,
   type OrderDetails,
 } from "@/lib/menu";
+import { itemRequiresTakeaway, TAKEAWAY_PACK_FEE_KOBO } from "@/lib/menu-custom";
 import { getDeliveryAreas, type DeliveryArea } from "@/lib/delivery";
 import { PaymentModal, type PaymentSuccessData } from "@/components/restaurant/payment-modal";
 import { saveOrder, type RestaurantOrder } from "@/lib/orders";
@@ -80,9 +83,22 @@ function Checkout() {
     }
   }, []);
 
+  // Check if any cart item requires compulsory takeaway packaging (foods like rice, beans, swallow, soups)
+  const isTakeawayCompulsory = lines.some((l) => {
+    const it = findItem(l.id);
+    return it ? itemRequiresTakeaway(it) : false;
+  });
+
+  // For snacks, user can optionally pick takeaway packaging; for cooked foods, it is compulsory
+  const [takeawaySelected, setTakeawaySelected] = useState<boolean>(true);
+
+  // If compulsory, it is always enforced
+  const hasTakeawayPackaging = isTakeawayCompulsory ? true : takeawaySelected;
+  const takeawayFee = hasTakeawayPackaging ? TAKEAWAY_PACK_FEE_KOBO : 0;
+
   const selectedArea = areas.find((a) => a.id === selectedAreaId) ?? areas[0];
   const areaFee = type === "delivery" ? (selectedArea?.feeKobo ?? 50000) : 0;
-  const currentTotal = orderTotal(lines, type, areaFee);
+  const currentTotal = orderTotal(lines, type, areaFee, takeawayFee);
   const fee = deliveryFee(type, areaFee);
 
   const handleInputChange = (
@@ -99,11 +115,17 @@ function Checkout() {
       orderType: type,
       deliveryArea: type === "delivery" ? selectedArea?.name : undefined,
       deliveryFeeKobo: type === "delivery" ? areaFee : 0,
+      takeawayFeeKobo: takeawayFee,
+      hasTakeawayPackaging,
+      isTakeawayCompulsory,
       address: formData.address.trim() || undefined,
       time: formData.time.trim() || undefined,
       notes: formData.notes.trim() || undefined,
     };
     const errs = validateOrder(o);
+    if (isTakeawayCompulsory && !hasTakeawayPackaging) {
+      errs["takeaway"] = "Takeaway food packaging is compulsory for meals in your order.";
+    }
     setErrors(errs);
     if (Object.keys(errs).length > 0) return null;
     return o;
@@ -129,7 +151,9 @@ function Checkout() {
         customerPhone: orderData.phone,
         ...(orderData.email ? { customerEmail: orderData.email } : {}),
         orderType: orderData.orderType,
-        ...(selectedArea ? { deliveryAreaId: selectedArea.id, deliveryAreaName: selectedArea.name } : {}),
+        ...(selectedArea
+          ? { deliveryAreaId: selectedArea.id, deliveryAreaName: selectedArea.name }
+          : {}),
         ...(orderData.address ? { deliveryAddress: orderData.address } : {}),
         ...(orderData.time ? { preferredTime: orderData.time } : {}),
         ...(orderData.notes ? { notes: orderData.notes } : {}),
@@ -148,6 +172,8 @@ function Checkout() {
           .filter((x): x is NonNullable<typeof x> => x !== null),
         subtotalKobo: cartSubtotal(lines),
         deliveryFeeKobo: orderData.orderType === "delivery" ? areaFee : 0,
+        takeawayFeeKobo: takeawayFee,
+        hasTakeawayPackaging,
         totalKobo: currentTotal,
         paymentMethod: "whatsapp",
         paymentStatus: "pending",
@@ -180,7 +206,9 @@ function Checkout() {
       customerPhone: orderData.phone,
       ...(orderData.email ? { customerEmail: orderData.email } : {}),
       orderType: orderData.orderType,
-      ...(selectedArea ? { deliveryAreaId: selectedArea.id, deliveryAreaName: selectedArea.name } : {}),
+      ...(selectedArea
+        ? { deliveryAreaId: selectedArea.id, deliveryAreaName: selectedArea.name }
+        : {}),
       ...(orderData.address ? { deliveryAddress: orderData.address } : {}),
       ...(orderData.time ? { preferredTime: orderData.time } : {}),
       ...(orderData.notes ? { notes: orderData.notes } : {}),
@@ -199,6 +227,8 @@ function Checkout() {
         .filter((x): x is NonNullable<typeof x> => x !== null),
       subtotalKobo: cartSubtotal(lines),
       deliveryFeeKobo: orderData.orderType === "delivery" ? areaFee : 0,
+      takeawayFeeKobo: takeawayFee,
+      hasTakeawayPackaging,
       totalKobo: currentTotal,
       paymentMethod: payment.method,
       paymentStatus: "paid",
@@ -299,6 +329,17 @@ function Checkout() {
                 <span>Subtotal</span>
                 <span>{money(confirmedOrder.subtotalKobo)}</span>
               </div>
+              {confirmedOrder.takeawayFeeKobo && confirmedOrder.takeawayFeeKobo > 0 ? (
+                <div className="summary-row">
+                  <span>Takeaway Food Packaging</span>
+                  <span>{money(confirmedOrder.takeawayFeeKobo)}</span>
+                </div>
+              ) : (
+                <div className="summary-row text-xs text-muted-foreground">
+                  <span>Takeaway Packaging</span>
+                  <span>Not included (Snacks only)</span>
+                </div>
+              )}
               {confirmedOrder.orderType === "delivery" && (
                 <div className="summary-row">
                   <span>Delivery ({confirmedOrder.deliveryAreaName ?? "Akungba Area"})</span>
@@ -492,6 +533,73 @@ function Checkout() {
                   />
                 </label>
 
+                {/* Takeaway / Packaging Option */}
+                <div className="form-wide takeaway-packaging-box">
+                  <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                    <span className="flex items-center gap-1.5 font-semibold text-primary">
+                      <PackageCheck size={18} /> Takeaway Food Packaging Option *
+                    </span>
+                    {isTakeawayCompulsory ? (
+                      <span className="takeaway-badge compulsory">COMPULSORY FOR FOODS</span>
+                    ) : (
+                      <span className="takeaway-badge optional">OPTIONAL FOR SNACKS</span>
+                    )}
+                  </div>
+
+                  {isTakeawayCompulsory ? (
+                    <div className="takeaway-card compulsory-state">
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="checkbox"
+                          checked={true}
+                          readOnly
+                          className="mt-1 accent-primary"
+                          id="takeaway-compulsory-input"
+                          aria-label="Takeaway packaging is compulsory for cooked meals"
+                        />
+                        <label htmlFor="takeaway-compulsory-input" className="cursor-pointer">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <strong>
+                              Takeaway Packaging Pack (+{money(TAKEAWAY_PACK_FEE_KOBO)})
+                            </strong>
+                            <span className="text-[11px] bg-primary/20 text-primary font-semibold px-2 py-0.5 rounded">
+                              Required
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Takeaway packaging is <strong>compulsory</strong> for foods like rice,
+                            beans, swallow and soups in your order to guarantee safe, sealed food
+                            packaging.
+                          </p>
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="takeaway-card optional-state">
+                      <label className="flex items-start gap-3 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={takeawaySelected}
+                          onChange={(e) => setTakeawaySelected(e.target.checked)}
+                          className="mt-1 accent-primary"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <strong>
+                              Add Takeaway Packaging Container (+{money(TAKEAWAY_PACK_FEE_KOBO)})
+                            </strong>
+                          </div>
+                          <span className="text-xs text-muted-foreground block mt-1">
+                            Optional underneath: Snacks and pastries do not need compulsory
+                            packaging. You can checkout without picking the takeaway option.
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                  {err("takeaway")}
+                </div>
+
                 {/* Payment Selection */}
                 <fieldset className="form-wide payment-choice-field">
                   <legend>Payment Option *</legend>
@@ -608,11 +716,17 @@ function Checkout() {
                   return it ? (
                     <div key={l.id} className="summary-row">
                       <div className="flex items-center gap-2">
-                        <img
-                          src={it.image}
-                          alt={it.name}
-                          className="w-9 h-9 rounded object-cover"
-                        />
+                        {it.image && !it.imageRemoved ? (
+                          <img
+                            src={it.image}
+                            alt={it.name}
+                            className="w-9 h-9 rounded object-cover"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded bg-secondary flex items-center justify-center text-muted-foreground border border-border">
+                            <UtensilsCrossed size={14} />
+                          </div>
+                        )}
                         <span>
                           {l.quantity} × {it.name}
                         </span>
@@ -626,6 +740,13 @@ function Checkout() {
               <div className="summary-row pt-3">
                 <span>Subtotal</span>
                 <span>{money(cartSubtotal(lines))}</span>
+              </div>
+
+              <div className="summary-row">
+                <span>Takeaway Packaging</span>
+                <span className={takeawayFee > 0 ? "font-medium" : "text-xs text-muted-foreground"}>
+                  {takeawayFee > 0 ? money(takeawayFee) : "None (Optional for snacks)"}
+                </span>
               </div>
 
               {type === "delivery" && (
