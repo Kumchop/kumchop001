@@ -1,5 +1,9 @@
 # Kumchop website
 
+- [ ] Require takeaway packaging for meals; keep snacks optional and include selection in orders.
+- [ ] Add password-protected shared dish creation and menu photo removal.
+- [ ] Verify checkout rules and menu management.
+
 - [x] Improve homepage photo clarity and refresh the website with an elegant luxury presentation.
 - [x] Verify updated pages, navigation, cart and small-screen layout.
 
