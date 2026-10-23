@@ -14,7 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      menu_changes: {
+        Row: {
+          category: string | null
+          id: string
+          image_path: string | null
+          image_removed: boolean
+          name: string | null
+          price_kobo: number | null
+          requires_takeaway: boolean | null
+          sold_out: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          id: string
+          image_path?: string | null
+          image_removed?: boolean
+          name?: string | null
+          price_kobo?: number | null
+          requires_takeaway?: boolean | null
+          sold_out?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          id?: string
+          image_path?: string | null
+          image_removed?: boolean
+          name?: string | null
+          price_kobo?: number | null
+          requires_takeaway?: boolean | null
+          sold_out?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
