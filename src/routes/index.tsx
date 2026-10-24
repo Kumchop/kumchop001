@@ -12,6 +12,7 @@ import {
 } from "@/components/restaurant/sections";
 import { pageHead } from "@/lib/menu";
 import { CravingFinder } from "@/components/restaurant/craving-finder";
+import { HeroParallax, Reveal } from "@/components/restaurant/motion";
 import interior from "@/assets/kumchop-interior-clear.jpg";
 export const Route = createFileRoute("/")({
   head: () =>
@@ -56,14 +57,27 @@ function Index() {
           </div>
         </div>
         <span className="hero-note hero-note-anim">Your table is waiting.</span>
+        <HeroParallax />
       </section>
       <CravingFinder />
-      <Highlights />
-      <Favourites />
-      <StorySection />
-      <SpecialsBanner />
-      <GalleryPreview />
-      <Reviews />
+      <Reveal>
+        <Highlights />
+      </Reveal>
+      <Reveal>
+        <Favourites />
+      </Reveal>
+      <Reveal>
+        <StorySection />
+      </Reveal>
+      <Reveal>
+        <SpecialsBanner />
+      </Reveal>
+      <Reveal>
+        <GalleryPreview />
+      </Reveal>
+      <Reveal>
+        <Reviews />
+      </Reveal>
     </>
   );
 }

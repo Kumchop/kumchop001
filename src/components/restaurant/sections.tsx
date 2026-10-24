@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { categories } from "@/lib/menu";
+import { Reveal, TiltCard } from "@/components/restaurant/motion";
 import feast from "@/assets/kumchop-feast.jpg";
 import interior from "@/assets/kumchop-interior-clear.jpg";
 
@@ -57,19 +58,23 @@ export function Favourites() {
         </Button>
       </div>
       <div className="category-grid">
-        {categories.map((c) => (
-          <Link to="/menu" search={{ category: c.id }} className="category-card" key={c.id}>
-            <div className="category-photo">
-              <img src={c.image} alt={c.name} width={512} height={512} loading="lazy" />
-            </div>
-            <div className="category-info">
-              <h3>{c.name}</h3>
-              <p>{c.description}</p>
-              <span className="category-arrow">
-                <ArrowUpRight size={19} />
-              </span>
-            </div>
-          </Link>
+        {categories.map((c, i) => (
+          <Reveal key={c.id} delay={(i % 3) * 90}>
+            <TiltCard>
+              <Link to="/menu" search={{ category: c.id }} className="category-card">
+                <div className="category-photo">
+                  <img src={c.image} alt={c.name} width={512} height={512} loading="lazy" />
+                </div>
+                <div className="category-info">
+                  <h3>{c.name}</h3>
+                  <p>{c.description}</p>
+                  <span className="category-arrow">
+                    <ArrowUpRight size={19} />
+                  </span>
+                </div>
+              </Link>
+            </TiltCard>
+          </Reveal>
         ))}
       </div>
     </section>
@@ -161,10 +166,14 @@ export function GalleryPreview() {
         </Button>
       </div>
       <div className="gallery-preview">
-        {categories.slice(1, 5).map((c) => (
-          <Link key={c.id} to="/gallery">
-            <img src={c.image} alt={c.name} width={512} height={512} loading="lazy" />
-          </Link>
+        {categories.slice(1, 5).map((c, i) => (
+          <Reveal key={c.id} delay={i * 90}>
+            <TiltCard max={10}>
+              <Link to="/gallery">
+                <img src={c.image} alt={c.name} width={512} height={512} loading="lazy" />
+              </Link>
+            </TiltCard>
+          </Reveal>
         ))}
       </div>
       <p className="fine-print">
