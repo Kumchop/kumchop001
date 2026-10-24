@@ -16,6 +16,7 @@ import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as LoadingRouteImport } from './routes/loading'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as OrderRouteImport } from './routes/order'
 import { Route as SpecialsRouteImport } from './routes/specials'
@@ -55,6 +56,11 @@ const GalleryRoute = GalleryRouteImport.update({
   path: '/gallery',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoadingRoute = LoadingRouteImport.update({
+  id: '/loading',
+  path: '/loading',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MenuRoute = MenuRouteImport.update({
   id: '/menu',
   path: '/menu',
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/gallery': typeof GalleryRoute
+  '/loading': typeof LoadingRoute
   '/menu': typeof MenuRoute
   '/order': typeof OrderRoute
   '/specials': typeof SpecialsRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/gallery': typeof GalleryRoute
+  '/loading': typeof LoadingRoute
   '/menu': typeof MenuRoute
   '/order': typeof OrderRoute
   '/specials': typeof SpecialsRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/dashboard': typeof DashboardRoute
   '/gallery': typeof GalleryRoute
+  '/loading': typeof LoadingRoute
   '/menu': typeof MenuRoute
   '/order': typeof OrderRoute
   '/specials': typeof SpecialsRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/gallery'
+    | '/loading'
     | '/menu'
     | '/order'
     | '/specials'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/gallery'
+    | '/loading'
     | '/menu'
     | '/order'
     | '/specials'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/dashboard'
     | '/gallery'
+    | '/loading'
     | '/menu'
     | '/order'
     | '/specials'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   DashboardRoute: typeof DashboardRoute
   GalleryRoute: typeof GalleryRoute
+  LoadingRoute: typeof LoadingRoute
   MenuRoute: typeof MenuRoute
   OrderRoute: typeof OrderRoute
   SpecialsRoute: typeof SpecialsRoute
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GalleryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/loading': {
+      id: '/loading'
+      path: '/loading'
+      fullPath: '/loading'
+      preLoaderRoute: typeof LoadingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/menu': {
       id: '/menu'
       path: '/menu'
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   DashboardRoute: DashboardRoute,
   GalleryRoute: GalleryRoute,
+  LoadingRoute: LoadingRoute,
   MenuRoute: MenuRoute,
   OrderRoute: OrderRoute,
   SpecialsRoute: SpecialsRoute,
