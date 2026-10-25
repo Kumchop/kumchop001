@@ -119,11 +119,15 @@ export function CravingFinder() {
             </p>
           ) : (
             <div className="craving-results">
-              {result.picks.map((p) => {
+              {result.picks.map((p, idx) => {
                 const it = findItem(p.id);
                 if (!it) return null;
                 return (
-                  <article key={p.id} className="craving-card">
+                  <article
+                    key={p.id}
+                    className="craving-card drop-motion-soft"
+                    style={{ "--drop-delay": `${idx * 80}ms` } as React.CSSProperties}
+                  >
                     <img src={it.image} alt="" loading="lazy" />
                     <div>
                       <h3>{it.name}</h3>

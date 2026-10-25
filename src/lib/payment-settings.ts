@@ -21,7 +21,8 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
   accountNumber: "8067730012",
   accountName: "Kumchop Food Express Akungba",
   whatsappConfirmationPhone: "+234 806 773 0012",
-  transferNote: "Include your order reference in the transfer narration for fast automatic matching.",
+  transferNote:
+    "Include your order reference in the transfer narration for fast automatic matching.",
   paystackPublicKey: "", // Left blank by default until owner pastes their live or test key
   paystackEnabled: false,
   cardEnabled: true,

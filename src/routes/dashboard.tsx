@@ -24,10 +24,15 @@ import {
   Trash2,
   X,
   PackageCheck,
+  CreditCard,
+  ShieldCheck,
+  ExternalLink,
+  Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { menuItems, money, categories, pageHead, MenuItem } from "@/lib/menu";
+import { getPublicPaymentConfig, type PaymentConfigResult } from "@/lib/payment.functions";
 import {
   getFullActiveMenu,
   saveCustomDish,
@@ -69,7 +74,23 @@ function DashboardPage() {
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<"orders" | "inventory" | "delivery">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "inventory" | "delivery" | "payments">(
+    "orders",
+  );
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfigResult>({
+    paystackConfigured: false,
+    paystackPublicKey: "",
+    paystackMode: "none",
+    flutterwaveConfigured: false,
+    flutterwavePublicKey: "",
+    flutterwaveMode: "none",
+    settlementBank: {
+      bankName: "Moniepoint Microfinance Bank",
+      accountNumber: "8067730012",
+      accountName: "Kumchop Food Express Akungba",
+      whatsappNumber: "+234 806 773 0012",
+    },
+  });
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [orderSearch, setOrderSearch] = useState("");
@@ -115,6 +136,9 @@ function DashboardPage() {
     setOverrides(getInventoryOverrides());
     setDeliveryAreas(getDeliveryAreas());
     setAllMenuDishes(getFullActiveMenu());
+    getPublicPaymentConfig()
+      .then(setPaymentConfig)
+      .catch(() => {});
   };
 
   useEffect(() => {
@@ -459,6 +483,12 @@ function DashboardPage() {
             onClick={() => setActiveTab("delivery")}
           >
             <MapPin size={17} /> Delivery Areas & Fees ({deliveryAreas.length})
+          </button>
+          <button
+            className={`dashboard-tab-btn ${activeTab === "payments" ? "active" : ""}`}
+            onClick={() => setActiveTab("payments")}
+          >
+            <CreditCard size={17} /> Bank & Gateway Settlements
           </button>
         </div>
       </div>
@@ -1182,6 +1212,169 @@ function DashboardPage() {
                 All fees reflect standard motorcycle logistics rates across Akungba Akoko, from AAUA
                 Campus to Ibaka and Medview quarters. Changes take effect on the customer checkout
                 screen immediately.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ===================== TAB 4: BANK & GATEWAYS ===================== */}
+        {activeTab === "payments" && (
+          <div className="space-y-6 max-w-4xl">
+            <div>
+              <h3 className="text-xl font-bold">Bank Accounts & Merchant Gateways</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Overview of Kumchop's settlement bank account and live Paystack / Flutterwave
+                merchant integrations.
+              </p>
+            </div>
+
+            {/* 1. Verified Settlement Account */}
+            <div className="bg-card border border-emerald-500/30 rounded-lg p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider rounded-bl">
+                Primary Settlement Account
+              </div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-foreground">
+                    {paymentConfig.settlementBank.bankName}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    All customer card payments, Flutterwave checkouts & direct transfers credit
+                    here.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-border">
+                <div className="p-3 bg-secondary/50 rounded border border-border">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Account Number
+                  </span>
+                  <strong className="text-lg font-mono text-emerald-400 block mt-1">
+                    {paymentConfig.settlementBank.accountNumber}
+                  </strong>
+                </div>
+                <div className="p-3 bg-secondary/50 rounded border border-border">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    Account Beneficiary
+                  </span>
+                  <strong className="text-sm font-semibold text-foreground block mt-1">
+                    {paymentConfig.settlementBank.accountName}
+                  </strong>
+                </div>
+                <div className="p-3 bg-secondary/50 rounded border border-border">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">
+                    WhatsApp Proof Line
+                  </span>
+                  <strong className="text-sm font-semibold text-foreground block mt-1">
+                    {paymentConfig.settlementBank.whatsappNumber}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Merchant Gateways Status Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Paystack Gateway Card */}
+              <div className="bg-card border border-border rounded-lg p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={18} className="text-primary" />
+                    <h4 className="font-bold text-sm">Paystack Gateway</h4>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded border ${
+                      paymentConfig.paystackMode === "live"
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                        : paymentConfig.paystackMode === "test"
+                          ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                          : "bg-secondary text-muted-foreground border-border"
+                    }`}
+                  >
+                    {paymentConfig.paystackMode === "live"
+                      ? "LIVE GATEWAY"
+                      : paymentConfig.paystackMode === "test"
+                        ? "TEST SANDBOX"
+                        : "CONFIG VIA .ENV"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Processes Visa, Mastercard, Verve, USSD & Apple Pay. Payments payout directly to
+                  Kumchop Moniepoint (8067730012).
+                </p>
+                <div className="p-3 bg-secondary/50 rounded text-xs space-y-1 font-mono">
+                  <div className="text-[11px] text-muted-foreground">Env Keys Required:</div>
+                  <div className="text-primary">PAYSTACK_SECRET_KEY=sk_live_...</div>
+                  <div className="text-primary">VITE_PAYSTACK_PUBLIC_KEY=pk_live_...</div>
+                </div>
+                <a
+                  href="https://dashboard.paystack.com/#/settings/developer"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-semibold"
+                >
+                  Paystack Developer Dashboard <ExternalLink size={12} />
+                </a>
+              </div>
+
+              {/* Flutterwave Gateway Card */}
+              <div className="bg-card border border-border rounded-lg p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap size={18} className="text-amber-500" />
+                    <h4 className="font-bold text-sm">Flutterwave Gateway</h4>
+                  </div>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded border ${
+                      paymentConfig.flutterwaveMode === "live"
+                        ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                        : paymentConfig.flutterwaveMode === "test"
+                          ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                          : "bg-secondary text-muted-foreground border-border"
+                    }`}
+                  >
+                    {paymentConfig.flutterwaveMode === "live"
+                      ? "LIVE GATEWAY"
+                      : paymentConfig.flutterwaveMode === "test"
+                        ? "TEST SANDBOX"
+                        : "CONFIG VIA .ENV"}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Enables African cards, mobile money, and instant transfer checkouts. Settles
+                  directly into Moniepoint MFB.
+                </p>
+                <div className="p-3 bg-secondary/50 rounded text-xs space-y-1 font-mono">
+                  <div className="text-[11px] text-muted-foreground">Env Keys Required:</div>
+                  <div className="text-amber-400">FLUTTERWAVE_SECRET_KEY=FLWSECK_LIVE-...</div>
+                  <div className="text-amber-400">VITE_FLUTTERWAVE_PUBLIC_KEY=FLWPUBK_LIVE-...</div>
+                </div>
+                <a
+                  href="https://dashboard.flutterwave.com/settings/apis"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:underline font-semibold"
+                >
+                  Flutterwave API Keys Dashboard <ExternalLink size={12} />
+                </a>
+              </div>
+            </div>
+
+            {/* Bank Linking Guide */}
+            <div className="p-5 bg-secondary/70 border border-border rounded-lg space-y-2">
+              <h4 className="font-bold text-sm text-foreground">
+                How Payments Settle into Kumchop Moniepoint Account
+              </h4>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                When customers pay online using Paystack or Flutterwave on this website, funds are
+                authorized through your merchant credentials and automatically settled directly into
+                your linked Moniepoint Microfinance Bank account (Account:{" "}
+                <strong>8067730012</strong>, Name: <strong>Kumchop Food Express Akungba</strong>).
+                Customers who select direct bank transfer transfer directly to this account with
+                their order reference.
               </p>
             </div>
           </div>

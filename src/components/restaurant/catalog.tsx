@@ -15,6 +15,7 @@ import { categories, menuItems, money, cartSubtotal, type MenuItem } from "@/lib
 import { getInventoryOverrides } from "@/lib/orders";
 import { getFullActiveMenu } from "@/lib/menu-custom";
 import { useCart } from "./cart";
+import { TiltCard } from "./motion";
 
 export type SortKey = "name" | "price-asc" | "price-desc";
 export type CatalogSearch = { category?: string; sort?: SortKey };
@@ -157,80 +158,94 @@ export function MenuCatalog({
         {items.length} {items.length === 1 ? "item" : "items"}
       </p>
       <div className="food-grid">
-        {items.map((item) => {
+        {items.map((item, index) => {
           const qty = lines.find((l) => l.id === item.id)?.quantity ?? 0;
           return (
-            <article className={`food-card ${item.soldOut ? "is-sold-out" : ""}`} key={item.id}>
-              {item.image && !item.imageRemoved ? (
-                <div className="food-photo">
-                  <img src={item.image} width={400} height={400} alt={item.name} loading="lazy" />
-                  {item.soldOut && <span className="sold-badge">Sold out</span>}
-                </div>
-              ) : (
-                <div className="food-photo food-photo-placeholder">
-                  <div className="no-photo-badge">
-                    <UtensilsCrossed size={26} className="text-muted-foreground/60 mb-1" />
-                    <span className="text-[11px] font-semibold text-muted-foreground">
-                      Kumchop Kitchen
-                    </span>
+            <TiltCard
+              key={item.id}
+              className={`food-card-tilt-wrap drop-motion-soft`}
+              style={{ "--drop-delay": `${(index % 8) * 55}ms` } as React.CSSProperties}
+            >
+              <article className={`food-card ${item.soldOut ? "is-sold-out" : ""}`}>
+                {item.image && !item.imageRemoved ? (
+                  <div className="food-photo" data-depth="mid">
+                    <img src={item.image} width={400} height={400} alt={item.name} loading="lazy" />
+                    {item.soldOut && (
+                      <span className="sold-badge" data-depth="high">
+                        Sold out
+                      </span>
+                    )}
                   </div>
-                  {item.soldOut && <span className="sold-badge">Sold out</span>}
-                </div>
-              )}
-              <div className="food-body">
-                <span className="food-cat">{catName(item.category)}</span>
-                <h3>{item.name}</h3>
-                <span className={`food-status ${item.soldOut ? "out" : "in"}`}>
-                  {item.soldOut ? "Currently unavailable" : "Available"}
-                </span>
-                <div className="food-bottom">
-                  <strong>{money(item.priceKobo)}</strong>
-                  {item.soldOut ? (
-                    <Button size="sm" variant="outline" disabled>
-                      Sold out
-                    </Button>
-                  ) : qty === 0 ? (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        change(item.id, 1);
-                        toast.success(`Added ${item.name} to order`, {
-                          action: {
-                            label: "View Cart",
-                            onClick: () => setDrawerOpen(true),
-                          },
-                          duration: 2500,
-                        });
-                      }}
-                      aria-label={`Add ${item.name} to cart`}
-                    >
-                      <Plus />
-                      Add
-                    </Button>
-                  ) : (
-                    <div className="quantity compact">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => change(item.id, -1)}
-                        aria-label={`Decrease ${item.name}`}
-                      >
-                        <Minus />
+                ) : (
+                  <div className="food-photo food-photo-placeholder" data-depth="mid">
+                    <div className="no-photo-badge">
+                      <UtensilsCrossed size={26} className="text-muted-foreground/60 mb-1" />
+                      <span className="text-[11px] font-semibold text-muted-foreground">
+                        Kumchop Kitchen
+                      </span>
+                    </div>
+                    {item.soldOut && (
+                      <span className="sold-badge" data-depth="high">
+                        Sold out
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="food-body" data-depth="high">
+                  <span className="food-cat">{catName(item.category)}</span>
+                  <h3>{item.name}</h3>
+                  <span className={`food-status ${item.soldOut ? "out" : "in"}`}>
+                    {item.soldOut ? "Currently unavailable" : "Available"}
+                  </span>
+                  <div className="food-bottom">
+                    <strong>{money(item.priceKobo)}</strong>
+                    {item.soldOut ? (
+                      <Button size="sm" variant="outline" disabled>
+                        Sold out
                       </Button>
-                      <span aria-label={`${item.name} quantity`}>{qty}</span>
+                    ) : qty === 0 ? (
                       <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => change(item.id, 1)}
-                        aria-label={`Increase ${item.name}`}
+                        size="sm"
+                        onClick={() => {
+                          change(item.id, 1);
+                          toast.success(`Added ${item.name} to order`, {
+                            action: {
+                              label: "View Cart",
+                              onClick: () => setDrawerOpen(true),
+                            },
+                            duration: 2500,
+                          });
+                        }}
+                        aria-label={`Add ${item.name} to cart`}
                       >
                         <Plus />
+                        Add
                       </Button>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="quantity compact">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => change(item.id, -1)}
+                          aria-label={`Decrease ${item.name}`}
+                        >
+                          <Minus />
+                        </Button>
+                        <span aria-label={`${item.name} quantity`}>{qty}</span>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => change(item.id, 1)}
+                          aria-label={`Increase ${item.name}`}
+                        >
+                          <Plus />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </article>
+              </article>
+            </TiltCard>
           );
         })}
       </div>

@@ -56,8 +56,10 @@ export function validateOrder(o: OrderDetails) {
 function Checkout() {
   const { lines, clear } = useCart();
   const [type, setType] = useState<"pickup" | "delivery">("pickup");
-  const [areas, setAreas] = useState<DeliveryArea[]>([]);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>("");
+  const [areas, setAreas] = useState<DeliveryArea[]>(() => getDeliveryAreas());
+  const [selectedAreaId, setSelectedAreaId] = useState<string>(
+    () => getDeliveryAreas()[0]?.id ?? "aaua-campus",
+  );
   const [paymentChoice, setPaymentChoice] = useState<"online" | "whatsapp">("online");
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [confirmedOrder, setConfirmedOrder] = useState<RestaurantOrder | null>(null);
@@ -78,10 +80,10 @@ function Checkout() {
   useEffect(() => {
     const list = getDeliveryAreas();
     setAreas(list);
-    if (list.length > 0 && list[0]) {
-      setSelectedAreaId(list[0].id);
+    if (list.length > 0 && !selectedAreaId) {
+      setSelectedAreaId(list[0]?.id ?? "aaua-campus");
     }
-  }, []);
+  }, [selectedAreaId]);
 
   // Check if any cart item requires compulsory takeaway packaging (foods like rice, beans, swallow, soups)
   const isTakeawayCompulsory = lines.some((l) => {
@@ -780,6 +782,7 @@ function Checkout() {
         totalKobo={currentTotal}
         customerName={formData.name}
         customerPhone={formData.phone}
+        customerEmail={formData.email}
         onSuccess={handlePaymentSuccess}
       />
     </>

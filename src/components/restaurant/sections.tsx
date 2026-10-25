@@ -28,8 +28,12 @@ export function Highlights() {
           { Icon: Utensils, title: "Wide Variety", copy: "Meals, snacks, desserts & more." },
           { Icon: Bike, title: "Fast & Reliable", copy: "Your food, on time." },
           { Icon: CookingPot, title: "Great Experience", copy: "Good food. Great moments." },
-        ].map(({ Icon, title, copy }) => (
-          <div className="highlight" key={title}>
+        ].map(({ Icon, title, copy }, index) => (
+          <div
+            className="highlight drop-motion-soft"
+            key={title}
+            style={{ "--drop-delay": `${index * 80}ms` } as React.CSSProperties}
+          >
             <Icon />
             <div>
               <h3>{title}</h3>
@@ -62,13 +66,13 @@ export function Favourites() {
           <Reveal key={c.id} delay={(i % 3) * 90}>
             <TiltCard>
               <Link to="/menu" search={{ category: c.id }} className="category-card">
-                <div className="category-photo">
+                <div className="category-photo" data-depth="mid">
                   <img src={c.image} alt={c.name} width={512} height={512} loading="lazy" />
                 </div>
-                <div className="category-info">
+                <div className="category-info" data-depth="high">
                   <h3>{c.name}</h3>
                   <p>{c.description}</p>
-                  <span className="category-arrow">
+                  <span className="category-arrow" data-depth="high">
                     <ArrowUpRight size={19} />
                   </span>
                 </div>

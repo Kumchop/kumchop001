@@ -10,12 +10,21 @@ import {
   Loader2,
   X,
   Lock,
+  ExternalLink,
+  Zap,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/menu";
+import {
+  getPublicPaymentConfig,
+  initializePaystackPayment,
+  initializeFlutterwavePayment,
+  type PaymentConfigResult,
+} from "@/lib/payment.functions";
 
 export type PaymentSuccessData = {
-  method: "card" | "transfer" | "ussd";
+  method: "card" | "transfer" | "ussd" | "paystack" | "flutterwave";
   reference: string;
 };
 
@@ -25,6 +34,7 @@ type PaymentModalProps = {
   totalKobo: number;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   onSuccess: (data: PaymentSuccessData) => void;
 };
 
@@ -41,29 +51,63 @@ export function PaymentModal({
   onClose,
   totalKobo,
   customerName,
-  customerPhone: _customerPhone,
+  customerPhone,
+  customerEmail,
   onSuccess,
 }: PaymentModalProps) {
-  const [tab, setTab] = useState<"card" | "transfer" | "ussd">("card");
-  const [cardNo, setCardNo] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
+  const [tab, setTab] = useState<"paystack" | "flutterwave" | "transfer" | "ussd">("paystack");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [otpStep, setOtpStep] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
+  const [gatewayError, setGatewayError] = useState<string | null>(null);
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [selectedBank, setSelectedBank] = useState(USSD_BANKS[0]?.code ?? "*737*");
   const [transferVerifying, setTransferVerifying] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(1800); // 30 mins
 
+  const [paymentConfig, setPaymentConfig] = useState<PaymentConfigResult>({
+    paystackConfigured: false,
+    paystackPublicKey: "",
+    paystackMode: "none",
+    flutterwaveConfigured: false,
+    flutterwavePublicKey: "",
+    flutterwaveMode: "none",
+    settlementBank: {
+      bankName: "Moniepoint Microfinance Bank",
+      accountNumber: "8067730012",
+      accountName: "Kumchop Food Express Akungba",
+      whatsappNumber: "+234 806 773 0012",
+    },
+  });
+
   const reference = `KUM-${Date.now().toString().slice(-6)}`;
-  const accountNumber = "8067730012";
+  const accountNumber = paymentConfig.settlementBank.accountNumber || "8067730012";
+  const bankName = paymentConfig.settlementBank.bankName || "Moniepoint Microfinance Bank";
+  const accountName = paymentConfig.settlementBank.accountName || "Kumchop Food Express Akungba";
+
+  // Load server-side payment configuration
+  useEffect(() => {
+    if (!isOpen) return;
+    getPublicPaymentConfig()
+      .then((cfg) => {
+        setPaymentConfig(cfg);
+        // Default to transfer if neither gateway is configured yet
+        if (!cfg.paystackConfigured && !cfg.flutterwaveConfigured) {
+          setTab("transfer");
+        } else if (cfg.paystackConfigured) {
+          setTab("paystack");
+        } else if (cfg.flutterwaveConfigured) {
+          setTab("flutterwave");
+        }
+      })
+      .catch(() => {
+        // Fallback default
+      });
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
-      setOtpStep(false);
       setIsProcessing(false);
       setTransferVerifying(false);
+      setGatewayError(null);
     }
   }, [isOpen]);
 
@@ -77,33 +121,133 @@ export function PaymentModal({
 
   if (!isOpen) return null;
 
-  const formatCard = (val: string) => {
-    const cleaned = val.replace(/\D/g, "").slice(0, 16);
-    return cleaned.replace(/(.{4})/g, "$1 ").trim();
+  // Paystack Live/Sandbox checkout trigger
+  const handlePaystackCheckout = async () => {
+    setIsProcessing(true);
+    setGatewayError(null);
+
+    try {
+      const res = await initializePaystackPayment({
+        data: {
+          email: customerEmail || `order-${reference.toLowerCase()}@kumchop.com.ng`,
+          amountKobo: totalKobo,
+          reference,
+          customerName: customerName || "Kumchop Diner",
+          customerPhone: customerPhone || "08067730012",
+        },
+      });
+
+      if (res.success && res.authorizationUrl) {
+        // Open Paystack checkout popup / window
+        const win = window.open(res.authorizationUrl, "_blank", "width=500,height=680");
+        if (!win) {
+          window.location.href = res.authorizationUrl;
+          return;
+        }
+
+        toast.info("Paystack checkout window opened.", {
+          description: "Complete your payment securely. Click 'I Have Paid' once finished.",
+        });
+
+        // Setup check for return or manual confirmation
+        setIsProcessing(false);
+      } else if (res.requiresClientFallback && res.publicKey) {
+        // Client-side Paystack Inline script fallback
+        initPaystackInline(res.publicKey);
+      } else {
+        // No server key yet: direct to Moniepoint transfer or sandbox test
+        setGatewayError(
+          res.message ||
+            "Paystack keys pending in .env. You can pay directly to Kumchop Moniepoint bank account below.",
+        );
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      setGatewayError("Network error contacting payment server. You can pay via direct transfer.");
+      setIsProcessing(false);
+    }
   };
 
-  const handleFillDemoCard = () => {
-    setCardNo("5399 4100 8829 4402");
-    setExpiry("08/28");
-    setCvv("381");
+  // Paystack client-side inline fallback
+  const initPaystackInline = (pubKey: string) => {
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    script.async = true;
+    script.onload = () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const PaystackPop = (window as any).PaystackPop;
+      if (PaystackPop) {
+        const handler = PaystackPop.setup({
+          key: pubKey,
+          email: customerEmail || `order-${reference.toLowerCase()}@kumchop.com.ng`,
+          amount: totalKobo,
+          ref: reference,
+          callback: (response: { reference: string }) => {
+            setIsProcessing(false);
+            onSuccess({ method: "paystack", reference: response.reference || reference });
+          },
+          onClose: () => {
+            setIsProcessing(false);
+            toast.info("Payment window closed.");
+          },
+        });
+        handler.openIframe();
+      } else {
+        setIsProcessing(false);
+        setGatewayError("Could not load Paystack inline gateway.");
+      }
+    };
+    script.onerror = () => {
+      setIsProcessing(false);
+      setGatewayError("Unable to load Paystack script.");
+    };
+    document.body.appendChild(script);
   };
 
-  const handlePayCard = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Flutterwave Live checkout trigger
+  const handleFlutterwaveCheckout = async () => {
+    setIsProcessing(true);
+    setGatewayError(null);
+
+    try {
+      const res = await initializeFlutterwavePayment({
+        data: {
+          email: customerEmail || `order-${reference.toLowerCase()}@kumchop.com.ng`,
+          amountKobo: totalKobo,
+          reference,
+          customerName: customerName || "Kumchop Diner",
+          customerPhone: customerPhone || "08067730012",
+        },
+      });
+
+      if (res.success && res.paymentLink) {
+        window.open(res.paymentLink, "_blank", "width=500,height=680");
+        setIsProcessing(false);
+        toast.info("Flutterwave payment page opened.", {
+          description: "Complete your transaction and confirm below.",
+        });
+      } else {
+        setGatewayError(
+          res.message ||
+            "Flutterwave secret key pending in server .env. Direct Moniepoint bank transfer is available.",
+        );
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      setGatewayError("Network error contacting payment server. You can pay via direct transfer.");
+      setIsProcessing(false);
+    }
+  };
+
+  const handleManualGatewayConfirm = () => {
     setIsProcessing(true);
     setTimeout(() => {
       setIsProcessing(false);
-      setOtpStep(true);
+      onSuccess({
+        method: tab === "paystack" ? "paystack" : "flutterwave",
+        reference,
+      });
     }, 1200);
-  };
-
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    setTimeout(() => {
-      setIsProcessing(false);
-      onSuccess({ method: "card", reference });
-    }, 1400);
   };
 
   const handleVerifyTransfer = () => {
@@ -111,7 +255,7 @@ export function PaymentModal({
     setTimeout(() => {
       setTransferVerifying(false);
       onSuccess({ method: "transfer", reference: `TRF-${reference}` });
-    }, 2000);
+    }, 1800);
   };
 
   const handleVerifyUssd = () => {
@@ -119,7 +263,7 @@ export function PaymentModal({
     setTimeout(() => {
       setIsProcessing(false);
       onSuccess({ method: "ussd", reference: `USD-${reference}` });
-    }, 1600);
+    }, 1400);
   };
 
   const copyToClipboard = (text: string) => {
@@ -151,7 +295,7 @@ export function PaymentModal({
               <span className="payment-badge-secure">
                 <Lock size={12} /> 256-bit Encrypted
               </span>
-              <span className="payment-gateway-tag">Paystack & Transfer Gateway</span>
+              <span className="payment-gateway-tag">Paystack & Bank Settlement</span>
             </div>
             <h2>Pay Kumchop Restaurant</h2>
             <p className="payment-sub">
@@ -170,163 +314,189 @@ export function PaymentModal({
           </div>
         </div>
 
-        {/* Channels */}
-        {!otpStep && (
-          <div className="payment-channels">
-            <button
-              type="button"
-              className={`payment-channel-tab ${tab === "card" ? "active" : ""}`}
-              onClick={() => setTab("card")}
-            >
-              <CreditCard size={18} />
-              <span>Card</span>
-            </button>
-            <button
-              type="button"
-              className={`payment-channel-tab ${tab === "transfer" ? "active" : ""}`}
-              onClick={() => setTab("transfer")}
-            >
-              <Building2 size={18} />
-              <span>Bank Transfer</span>
-            </button>
-            <button
-              type="button"
-              className={`payment-channel-tab ${tab === "ussd" ? "active" : ""}`}
-              onClick={() => setTab("ussd")}
-            >
-              <PhoneCall size={18} />
-              <span>USSD</span>
-            </button>
+        {/* Settlement Account Notification Badge */}
+        <div className="px-6 py-2.5 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between text-xs text-emerald-400">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={14} className="text-emerald-400 shrink-0" />
+            <span>
+              Direct Settlement: <strong>{bankName}</strong> · Acct:{" "}
+              <strong>{accountNumber}</strong>
+            </span>
+          </div>
+          <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded">
+            Verified Merchant
+          </span>
+        </div>
+
+        {/* Gateway & Channel Selector Tabs */}
+        <div className="payment-channels">
+          <button
+            type="button"
+            className={`payment-channel-tab ${tab === "paystack" ? "active" : ""}`}
+            onClick={() => setTab("paystack")}
+          >
+            <CreditCard size={18} />
+            <span>Paystack Card</span>
+          </button>
+          <button
+            type="button"
+            className={`payment-channel-tab ${tab === "flutterwave" ? "active" : ""}`}
+            onClick={() => setTab("flutterwave")}
+          >
+            <Zap size={18} />
+            <span>Flutterwave</span>
+          </button>
+          <button
+            type="button"
+            className={`payment-channel-tab ${tab === "transfer" ? "active" : ""}`}
+            onClick={() => setTab("transfer")}
+          >
+            <Building2 size={18} />
+            <span>Bank Transfer</span>
+          </button>
+          <button
+            type="button"
+            className={`payment-channel-tab ${tab === "ussd" ? "active" : ""}`}
+            onClick={() => setTab("ussd")}
+          >
+            <PhoneCall size={18} />
+            <span>USSD</span>
+          </button>
+        </div>
+
+        {/* Tab 1: Paystack Live Checkout */}
+        {tab === "paystack" && (
+          <div className="payment-body">
+            <div className="p-4 rounded-lg bg-card/60 border border-primary/25 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+                  Paystack Merchant Checkout
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+                  {paymentConfig.paystackMode === "live"
+                    ? "LIVE GATEWAY"
+                    : paymentConfig.paystackMode === "test"
+                      ? "TEST SANDBOX"
+                      : "READY FOR KEYS"}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Pay using Nigerian Debit Cards (Mastercard, Visa, Verve), Apple Pay, or Bank
+                Transfer. Funds settle automatically into <strong>{accountName}</strong>.
+              </p>
+
+              {gatewayError && (
+                <div className="p-3 text-xs bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded">
+                  {gatewayError}
+                </div>
+              )}
+
+              <Button
+                size="lg"
+                className="w-full flex items-center justify-center gap-2 text-sm"
+                onClick={handlePaystackCheckout}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} /> Connecting to Paystack...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink size={16} /> Launch Paystack Checkout ({money(totalKobo)})
+                  </>
+                )}
+              </Button>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+                <span className="text-muted-foreground">Already authorized on Paystack?</span>
+                <button
+                  type="button"
+                  onClick={handleManualGatewayConfirm}
+                  className="text-primary hover:underline font-semibold"
+                >
+                  I Have Paid Successfully
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Tab 1: Card */}
-        {tab === "card" && !otpStep && (
-          <form onSubmit={handlePayCard} className="payment-body">
-            <div className="payment-demo-strip">
-              <span>Testing checkout?</span>
-              <button type="button" onClick={handleFillDemoCard} className="payment-demo-btn">
-                Click to Auto-fill Demo Card
-              </button>
-            </div>
-
-            <label className="payment-input-group">
-              <span>Card Number</span>
-              <div className="payment-card-input-wrap">
-                <input
-                  type="text"
-                  placeholder="0000 0000 0000 0000"
-                  value={cardNo}
-                  onChange={(e) => setCardNo(formatCard(e.target.value))}
-                  required
-                />
-                <div className="card-brand-pills">
-                  <span>Mastercard</span>
-                  <span>Visa</span>
-                  <span>Verve</span>
-                </div>
+        {/* Tab 2: Flutterwave Live Checkout */}
+        {tab === "flutterwave" && (
+          <div className="payment-body">
+            <div className="p-4 rounded-lg bg-card/60 border border-amber-500/25 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-amber-400 uppercase tracking-wider">
+                  Flutterwave Merchant Gateway
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  {paymentConfig.flutterwaveMode === "live"
+                    ? "LIVE GATEWAY"
+                    : paymentConfig.flutterwaveMode === "test"
+                      ? "TEST SANDBOX"
+                      : "READY FOR KEYS"}
+                </span>
               </div>
-            </label>
-
-            <div className="payment-card-row">
-              <label className="payment-input-group">
-                <span>Valid Till (MM/YY)</span>
-                <input
-                  type="text"
-                  placeholder="MM/YY"
-                  maxLength={5}
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                  required
-                />
-              </label>
-
-              <label className="payment-input-group">
-                <span>CVV</span>
-                <input
-                  type="password"
-                  placeholder="123"
-                  maxLength={4}
-                  value={cvv}
-                  onChange={(e) => setCvv(e.target.value)}
-                  required
-                />
-              </label>
-            </div>
-
-            <Button type="submit" size="lg" className="w-full mt-4" disabled={isProcessing}>
-              {isProcessing ? (
-                <>
-                  <Loader2 className="animate-spin" /> Authorizing Card...
-                </>
-              ) : (
-                <>
-                  <ShieldCheck size={18} /> Pay {money(totalKobo)} Securely
-                </>
-              )}
-            </Button>
-          </form>
-        )}
-
-        {/* Card OTP Step */}
-        {tab === "card" && otpStep && (
-          <form onSubmit={handleVerifyOtp} className="payment-body payment-otp-step">
-            <div className="payment-otp-box">
-              <ShieldCheck size={36} className="payment-otp-icon" />
-              <h3>Enter 3D-Secure Bank OTP</h3>
-              <p>
-                A test verification code has been simulated for your bank card. Use test OTP{" "}
-                <strong>123456</strong> to approve.
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Pay with African cards, mobile money, or instant USSD with settlement to Kumchop's
+                Moniepoint bank account.
               </p>
-              <input
-                type="text"
-                placeholder="Enter 6-digit code (e.g. 123456)"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-                maxLength={6}
-                required
-                className="payment-otp-input"
-              />
-              <div className="flex gap-3 w-full mt-4">
-                <Button
+
+              {gatewayError && (
+                <div className="p-3 text-xs bg-amber-500/10 border border-amber-500/25 text-amber-300 rounded">
+                  {gatewayError}
+                </div>
+              )}
+
+              <Button
+                size="lg"
+                className="w-full flex items-center justify-center gap-2 text-sm bg-amber-600 hover:bg-amber-500"
+                onClick={handleFlutterwaveCheckout}
+                disabled={isProcessing}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="animate-spin" size={16} /> Connecting to Flutterwave...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink size={16} /> Pay with Flutterwave ({money(totalKobo)})
+                  </>
+                )}
+              </Button>
+
+              <div className="flex items-center justify-between pt-2 border-t border-border/60 text-xs">
+                <span className="text-muted-foreground">Finished on Flutterwave?</span>
+                <button
                   type="button"
-                  variant="outline"
-                  onClick={() => setOtpStep(false)}
-                  disabled={isProcessing}
+                  onClick={handleManualGatewayConfirm}
+                  className="text-amber-400 hover:underline font-semibold"
                 >
-                  Back
-                </Button>
-                <Button type="submit" className="flex-1" disabled={isProcessing || !otpCode}>
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="animate-spin" /> Confirming...
-                    </>
-                  ) : (
-                    "Authorize & Complete Order"
-                  )}
-                </Button>
+                  Confirm Payment
+                </button>
               </div>
             </div>
-          </form>
+          </div>
         )}
 
-        {/* Tab 2: Bank Transfer */}
+        {/* Tab 3: Direct Moniepoint Bank Transfer */}
         {tab === "transfer" && (
           <div className="payment-body">
             <div className="transfer-instructions">
               <p>
-                Transfer exactly <strong>{money(totalKobo)}</strong> to the Kumchop restaurant
-                account below using your bank mobile app.
+                Transfer exactly <strong>{money(totalKobo)}</strong> to Kumchop's verified merchant
+                bank account below using any banking mobile app.
               </p>
               <span className="transfer-countdown">
-                Expires in <strong>{formatTimer(timerSeconds)}</strong>
+                Session expires in <strong>{formatTimer(timerSeconds)}</strong>
               </span>
             </div>
 
             <div className="transfer-card">
               <div className="transfer-row">
                 <span className="transfer-lbl">Bank Name</span>
-                <strong className="transfer-val">Moniepoint Microfinance Bank</strong>
+                <strong className="transfer-val">{bankName}</strong>
               </div>
               <div className="transfer-row">
                 <span className="transfer-lbl">Account Number</span>
@@ -344,11 +514,11 @@ export function PaymentModal({
                 </div>
               </div>
               <div className="transfer-row">
-                <span className="transfer-lbl">Beneficiary</span>
-                <strong className="transfer-val">Kumchop Food Express Akungba</strong>
+                <span className="transfer-lbl">Account Name</span>
+                <strong className="transfer-val">{accountName}</strong>
               </div>
               <div className="transfer-row">
-                <span className="transfer-lbl">Payment Ref</span>
+                <span className="transfer-lbl">Transfer Narration</span>
                 <span className="transfer-ref">{reference}</span>
               </div>
             </div>
@@ -372,13 +542,13 @@ export function PaymentModal({
                 )}
               </Button>
               <p className="payment-footnote">
-                Payments are automatically credited to your order queue immediately upon transfer.
+                Transfers reflect directly in Kumchop kitchen dispatch queue for fast preparation.
               </p>
             </div>
           </div>
         )}
 
-        {/* Tab 3: USSD */}
+        {/* Tab 4: USSD */}
         {tab === "ussd" && (
           <div className="payment-body">
             <label className="payment-input-group">
@@ -410,7 +580,8 @@ export function PaymentModal({
                 </button>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Follow your bank prompts and authorize with your USSD PIN.
+                Follow your bank prompts and authorize with your USSD PIN. Funds credit directly to
+                Kumchop Moniepoint.
               </p>
             </div>
 
@@ -435,7 +606,7 @@ export function PaymentModal({
         )}
 
         <div className="payment-footer">
-          <span>Protected by SSL / PCI-DSS Compliant Infrastructure</span>
+          <span>Protected by SSL / PCI-DSS Compliant Infrastructure · Moniepoint MFB</span>
         </div>
       </div>
     </div>

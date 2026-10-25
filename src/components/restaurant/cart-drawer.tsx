@@ -15,11 +15,15 @@ export function CartLines({ compact = false }: { compact?: boolean }) {
   const { lines, change, remove } = useCart();
   return (
     <>
-      {lines.map((line) => {
+      {lines.map((line, idx) => {
         const item = findItem(line.id);
         if (!item) return null;
         return (
-          <article className={`cart-line ${compact ? "compact" : ""}`} key={line.id}>
+          <article
+            className={`cart-line drop-motion-soft ${compact ? "compact" : ""}`}
+            key={line.id}
+            style={{ "--drop-delay": `${idx * 40}ms` } as React.CSSProperties}
+          >
             {item.image && !item.imageRemoved ? (
               <img src={item.image} width={80} height={80} alt={item.name} loading="lazy" />
             ) : (
